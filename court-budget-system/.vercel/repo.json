@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_dnsgXcVof7nYjp9nuhwN6RcYGTI3",
+      "name": "budget-management",
+      "directory": ".",
+      "orgId": "team_ayw0PmUV7cvHnkMqXN5RqZhn"
+    }
+  ]
+}
