@@ -1,0 +1,98 @@
+// ระบบจัดการงบประมาณศาล - Prisma schema
+// ผังบัญชีลำดับชั้น 5 ระดับ เช่น 1.1.1.1.1
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum BudgetCategory {
+  COMPENSATION // ค่าตอบแทน
+  SERVICES // ค่าใช้สอย
+  MATERIALS // ค่าวัสดุ
+  UTILITIES // ค่าสาธารณูปโภค
+}
+
+model ChartOfAccount {
+  id String @id @default(cuid())
+
+  // รหัสบัญชี (ของสำนักงาน) เช่น "1.1.1.1.1"
+  code String @unique
+
+  // ระดับของรายการ 1-5 คำนวณจากจำนวนส่วนของ code
+  level Int
+
+  // ชื่อบัญชีของสำนักงาน
+  nameOffice String
+
+  // รหัสบัญชี GFMIS
+  gfmisCode String?
+
+  // ชื่อบัญชีตามผังบัญชี GFMIS
+  gfmisName String?
+
+  // หมวดงบประมาณ ใช้กับรายการระดับบนสุด (level 1) เป็นหลัก
+  category BudgetCategory?
+
+  // ลำดับชั้น (self relation)
+  parentId String?
+  parent   ChartOfAccount?  @relation("AccountHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children ChartOfAccount[] @relation("AccountHierarchy")
+
+  isActive  Boolean  @default(true)
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  disbursements Disbursement[]
+
+  @@index([parentId])
+  @@index([category])
+}
+
+// รายการเบิกจ่ายจริงต่อบัญชี ต่อเดือน (ใช้ทำรายงานรายเดือน/รายไตรมาส และรายงาน 4 หมวด)
+model Disbursement {
+  id String @id @default(cuid())
+
+  account   ChartOfAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId String
+
+  fiscalYear Int // ปีงบประมาณ พ.ศ.
+  month      Int // 1-12
+
+  budgetAmount Decimal @db.Decimal(15, 2) // งบประมาณที่ได้รับจัดสรร
+  spentAmount  Decimal @db.Decimal(15, 2) // ยอดเบิกจ่ายจริง
+
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([accountId, fiscalYear, month])
+  @@index([fiscalYear, month])
+}
+
+// แบบแจ้งการโอนเงินงบประมาณ ระหว่างบัญชี
+model BudgetTransfer {
+  id String @id @default(cuid())
+
+  transferNo String   @unique // เลขที่หนังสือแจ้งโอน
+  transferDate DateTime
+
+  fromAccountCode String
+  fromAccountName String
+  toAccountCode   String
+  toAccountName   String
+
+  amount Decimal @db.Decimal(15, 2)
+  reason String?
+
+  requestedBy String?
+  approvedBy  String?
+
+  createdAt DateTime @default(now())
+}
