@@ -39,17 +39,30 @@ export interface Disbursement {
   account?: ChartOfAccount;
 }
 
+export interface TransferItem {
+  id: string;
+  transferId: string;
+  lineNo: number;
+  activity: string;
+  fiscalYear: number;
+  personnelAmount: string; // Decimal serialized as string
+  managementAmount: string;
+  investmentAmount: string;
+}
+
 export interface BudgetTransfer {
   id: string;
-  transferNo: string;
+  documentNo: string;
+  transferSeq: number;
+  fiscalYear: number;
+  documentDate: string;
   transferDate: string;
-  fromAccountCode: string;
-  fromAccountName: string;
-  toAccountCode: string;
-  toAccountName: string;
-  amount: string;
-  reason: string | null;
-  requestedBy: string | null;
-  approvedBy: string | null;
+  month: number;
+  quarter: number;
+  fromUnit: string;
+  toUnit: string;
+  remark: string | null;
+  preparedBy: string | null;
   createdAt: string;
+  items: TransferItem[];
 }

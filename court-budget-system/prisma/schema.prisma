@@ -75,23 +75,46 @@ model Disbursement {
   @@index([fiscalYear, month])
 }
 
-// แบบแจ้งการโอนเงินงบประมาณ ระหว่างบัญชี
+// แบบแจ้งการโอนเงินงบประมาณประจำปี ของสำนักงานศาลยุติธรรม (ส่วนหัวเอกสาร)
+// ยอดรวมแต่ละด้านและรวมทั้งสิ้น คำนวณจากรายการงาน/กิจกรรม (TransferItem) ไม่เก็บซ้ำ
 model BudgetTransfer {
   id String @id @default(cuid())
 
-  transferNo String   @unique // เลขที่หนังสือแจ้งโอน
-  transferDate DateTime
+  documentNo   String   @unique // เลขที่เอกสาร เช่น 69-01-0000102
+  transferSeq  Int // โอนครั้งที่
+  fiscalYear   Int // ปีงบประมาณ พ.ศ.
+  documentDate DateTime // ลงวันที่
+  transferDate DateTime // วันที่โอนเข้าบัญชี
+  month        Int // ประจำเดือน 1-12
+  quarter      Int // ประจำไตรมาส 1-4 (ไตรมาสปีงบประมาณ)
 
-  fromAccountCode String
-  fromAccountName String
-  toAccountCode   String
-  toAccountName   String
+  fromUnit String // โอนจากหน่วยงาน
+  toUnit   String // ถึงหน่วยงาน
 
-  amount Decimal @db.Decimal(15, 2)
-  reason String?
+  remark     String? // หมายเหตุ
+  preparedBy String? // ผู้จัดทำ
 
-  requestedBy String?
-  approvedBy  String?
+  items TransferItem[]
 
   createdAt DateTime @default(now())
+
+  @@index([fiscalYear, quarter])
+}
+
+// รายการ งานประจำ - กิจกรรม / โครงการ ในแบบแจ้งโอน
+model TransferItem {
+  id String @id @default(cuid())
+
+  transfer   BudgetTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  transferId String
+
+  lineNo   Int // ลำดับที่
+  activity String // งานประจำ - กิจกรรม / โครงการ
+  fiscalYear Int // ปีงบประมาณ
+
+  personnelAmount  Decimal @default(0) @db.Decimal(15, 2) // ด้านบุคลากร
+  managementAmount Decimal @default(0) @db.Decimal(15, 2) // ด้านบริหารจัดการ
+  investmentAmount Decimal @default(0) @db.Decimal(15, 2) // ด้านลงทุน
+
+  @@index([transferId])
 }
