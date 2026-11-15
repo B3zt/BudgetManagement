@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { entrySums } from "@/lib/disbursementEntries";
 
 // GET /api/disbursements?fiscalYear=2569&month=7 (month ไม่ระบุ = ทั้งปีงบประมาณ)
 export async function GET(req: NextRequest) {
@@ -43,17 +44,22 @@ export async function POST(req: NextRequest) {
   if ([budget, fund, courtFee].some((n) => isNaN(n) || n < 0)) {
     return NextResponse.json({ error: "จำนวนเงินไม่ถูกต้อง" }, { status: 400 });
   }
-  const spent = Math.round((fund + courtFee) * 100) / 100;
 
   const account = await prisma.chartOfAccount.findUnique({ where: { id: accountId } });
   if (!account) {
     return NextResponse.json({ error: "ไม่พบรายการบัญชีนี้" }, { status: 404 });
   }
 
+  // ถ้าเดือนนั้นมีรายการเบิกจ่ายย่อยแล้ว ยอดเบิกจ่ายใช้ผลรวมของรายการย่อยเสมอ (ไม่รับค่าที่ส่งมา)
+  const fromEntries = await entrySums(accountId, Number(fiscalYear), Number(month));
+  const finalFund = fromEntries ? fromEntries.fund : fund;
+  const finalCourtFee = fromEntries ? fromEntries.courtFee : courtFee;
+  const spent = Math.round((finalFund + finalCourtFee) * 100) / 100;
+
   const data = {
     budgetAmount: budget,
-    spentBudgetFund: fund,
-    spentCourtFee: courtFee,
+    spentBudgetFund: finalFund,
+    spentCourtFee: finalCourtFee,
     spentAmount: spent,
     note: note?.trim() || null,
   };

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { ChartOfAccount, Disbursement } from "@/lib/types";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import type { ChartOfAccount, Disbursement, DisbursementEntry, FundSource } from "@/lib/types";
+import { FUND_SOURCE_LABELS } from "@/lib/types";
 import { CATEGORY_LABELS, categoryOfAccount, sortByCode } from "@/lib/accountUtils";
-import { THAI_MONTHS, currentThaiFiscalYear, formatBaht } from "@/lib/thai";
+import { THAI_MONTHS, currentThaiFiscalYear, formatBaht, formatThaiShortDate } from "@/lib/thai";
 import { amountOrZero, parseAmount } from "@/lib/amount";
 
 type Field = "budget" | "fund" | "courtFee";
@@ -23,6 +24,9 @@ type Sums = { budget: number; fund: number; courtFee: number };
 const dash = (n: number) => (n === 0 ? "-" : formatBaht(n));
 const str = (v: string | number | undefined | null) => (v === undefined || v === null ? "" : Number(v) === 0 ? "" : String(Number(v)));
 
+type EntryForm = { id: string | null; date: string; description: string; fundSource: FundSource; amount: string };
+const emptyForm = (): EntryForm => ({ id: null, date: "", description: "", fundSource: "BUDGET", amount: "" });
+
 export default function DisbursementsEntryPage() {
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +35,10 @@ export default function DisbursementsEntryPage() {
   const [rows, setRows] = useState<Record<string, Row>>({});
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [search, setSearch] = useState("");
+  const [entries, setEntries] = useState<Record<string, DisbursementEntry[]>>({});
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [form, setForm] = useState<EntryForm>(emptyForm());
+  const [entrySaving, setEntrySaving] = useState(false);
 
   const accountsById = useMemo(() => {
     const m = new Map<string, ChartOfAccount>();
@@ -67,6 +75,90 @@ export default function DisbursementsEntryPage() {
       };
     });
     setRows(next);
+
+    const eres = await fetch(`/api/disbursement-entries?fiscalYear=${fiscalYear}&month=${month}`);
+    const ejson = await eres.json();
+    const grouped: Record<string, DisbursementEntry[]> = {};
+    (ejson.data ?? []).forEach((e: DisbursementEntry) => {
+      (grouped[e.accountId] ??= []).push(e);
+    });
+    setEntries(grouped);
+    setOpenId(null);
+    setForm(emptyForm());
+  };
+
+  // นำยอดรวมที่เซิร์ฟเวอร์คำนวณจากรายการเบิกจ่าย มาใส่ในแถวของบัญชีนั้น
+  const applyDisbursement = (id: string, d: Disbursement) => {
+    setRows((prev) => {
+      const old = prev[id];
+      if (!old) return prev;
+      return {
+        ...prev,
+        [id]: { ...old, fund: str(d.spentBudgetFund), courtFee: str(d.spentCourtFee), saved: !old.dirty },
+      };
+    });
+  };
+
+  const toggleEntries = (id: string) => {
+    setForm(emptyForm());
+    setOpenId((cur) => (cur === id ? null : id));
+  };
+
+  const editEntry = (e: DisbursementEntry) =>
+    setForm({
+      id: e.id,
+      date: e.entryDate ? e.entryDate.slice(0, 10) : "",
+      description: e.description ?? "",
+      fundSource: e.fundSource,
+      amount: String(Number(e.amount)),
+    });
+
+  const submitEntry = async (accountId: string) => {
+    const amt = parseAmount(form.amount);
+    if (amt === null || amt <= 0) {
+      alert("กรุณากรอกจำนวนเงินมากกว่า 0 (พิมพ์ตัวเลข หรือสูตรบวก เช่น 8879+6480)");
+      return;
+    }
+    setEntrySaving(true);
+    try {
+      const payload = {
+        entryDate: form.date || null,
+        description: form.description,
+        fundSource: form.fundSource,
+        amount: amt,
+      };
+      const res = await fetch(form.id ? `/api/disbursement-entries/${form.id}` : "/api/disbursement-entries", {
+        method: form.id ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form.id ? payload : { ...payload, accountId, fiscalYear, month }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      const saved: DisbursementEntry = json.data;
+      setEntries((prev) => {
+        const list = prev[accountId] ?? [];
+        return { ...prev, [accountId]: form.id ? list.map((x) => (x.id === saved.id ? saved : x)) : [...list, saved] };
+      });
+      applyDisbursement(accountId, json.disbursement);
+      setForm(emptyForm());
+    } catch (err) {
+      alert(err instanceof Error && err.message ? err.message : "บันทึกรายการไม่สำเร็จ กรุณาลองใหม่");
+    } finally {
+      setEntrySaving(false);
+    }
+  };
+
+  const deleteEntry = async (accountId: string, e: DisbursementEntry) => {
+    if (!confirm(`ลบรายการนี้ (${formatBaht(Number(e.amount))} บาท) ?`)) return;
+    const res = await fetch(`/api/disbursement-entries/${e.id}`, { method: "DELETE" });
+    const json = await res.json();
+    if (!res.ok) {
+      alert(json.error ?? "ลบไม่สำเร็จ");
+      return;
+    }
+    setEntries((prev) => ({ ...prev, [accountId]: (prev[accountId] ?? []).filter((x) => x.id !== e.id) }));
+    applyDisbursement(accountId, json.disbursement);
+    if (form.id === e.id) setForm(emptyForm());
   };
 
   useEffect(() => {
@@ -206,7 +298,7 @@ export default function DisbursementsEntryPage() {
         <h1 className="font-display text-xl text-navy-900">บันทึกข้อมูลเบิกจ่าย</h1>
         <p className="text-sm text-navy-500 mt-0.5">
           กรอกงบประมาณที่ได้รับจัดสรรและยอดเบิกจ่ายจริงแยกตามแหล่งเงิน (เงินงบประมาณ / เงินค่าธรรมเนียมศาล) รายบัญชี ต่อเดือน —
-          รายการที่มีรายการย่อยจะรวมยอดให้อัตโนมัติ พิมพ์สูตรบวกในช่องได้ เช่น 8879+6480+155
+          กดปุ่ม "+ เพิ่มรายการเบิกจ่าย" ที่บัญชีเพื่อบันทึกทีละรายการ ระบบรวมยอดของเดือนให้อัตโนมัติ (หรือพิมพ์สูตรบวกในช่องยอดโดยตรง เช่น 8879+6480+155)
         </p>
 
         <div className="flex flex-wrap items-end gap-4 mt-4">
@@ -328,24 +420,47 @@ export default function DisbursementsEntryPage() {
                   }
 
                   const total = amountOrZero(row.fund) + amountOrZero(row.courtFee);
+                  const list = entries[a.id] ?? [];
+                  const hasEntries = list.length > 0;
+                  const isOpen = openId === a.id;
                   return (
-                    <tr key={a.id} className="border-t border-line">
+                    <Fragment key={a.id}>
+                    <tr className="border-t border-line">
                       <td className="py-2 pr-4 align-middle" style={indent}>
                         <span className="font-mono text-xs text-navy-500 mr-2">{a.code}</span>
                         {a.nameOffice}
+                        <button
+                          onClick={() => toggleEntries(a.id)}
+                          className={`ml-3 text-xs rounded border px-2 py-0.5 ${
+                            hasEntries
+                              ? "border-brass-500 text-brass-700 bg-brass-50"
+                              : "border-line text-navy-500 hover:border-brass-500"
+                          }`}
+                        >
+                          {hasEntries ? `รายการเบิกจ่าย (${list.length})` : "+ เพิ่มรายการเบิกจ่าย"}
+                        </button>
                       </td>
-                      {(["budget", "fund", "courtFee"] as Field[]).map((f, i) => (
-                        <td key={f} className={`px-4 py-2 text-right ${i === 1 ? "border-l border-line" : ""}`}>
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={row[f]}
-                            onChange={(e) => updateRow(a.id, f, e.target.value)}
-                            onBlur={() => resolveOnBlur(a.id, f)}
-                            className={inputCls(parseAmount(row[f]) === null)}
-                          />
-                        </td>
-                      ))}
+                      {(["budget", "fund", "courtFee"] as Field[]).map((f, i) => {
+                        const locked = hasEntries && f !== "budget"; // ยอดเบิกจ่ายคำนวณจากรายการย่อย
+                        return (
+                          <td key={f} className={`px-4 py-2 text-right ${i === 1 ? "border-l border-line" : ""}`}>
+                            {locked ? (
+                              <span className="inline-block w-32 text-sm px-2 py-1.5" title="รวมจากรายการเบิกจ่าย">
+                                {dash(amountOrZero(row[f]))}
+                              </span>
+                            ) : (
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={row[f]}
+                                onChange={(e) => updateRow(a.id, f, e.target.value)}
+                                onBlur={() => resolveOnBlur(a.id, f)}
+                                className={inputCls(parseAmount(row[f]) === null)}
+                              />
+                            )}
+                          </td>
+                        );
+                      })}
                       <td className="px-4 py-2 text-right font-medium">{dash(total)}</td>
                       <td className="px-4 py-2 text-right">
                         {row.dirty ? (
@@ -363,6 +478,102 @@ export default function DisbursementsEntryPage() {
                         )}
                       </td>
                     </tr>
+                    {isOpen && (
+                      <tr className="bg-navy-50/40">
+                        <td colSpan={6} className="px-4 py-3" style={{ paddingLeft: `${16 + a.level * 18}px` }}>
+                          {list.length > 0 && (
+                            <table className="w-full max-w-3xl text-xs mb-3">
+                              <thead>
+                                <tr className="text-navy-500 text-left">
+                                  <th className="py-1 pr-3 font-medium w-24">วันที่</th>
+                                  <th className="py-1 pr-3 font-medium">รายละเอียด</th>
+                                  <th className="py-1 pr-3 font-medium">แหล่งเงิน</th>
+                                  <th className="py-1 pr-3 font-medium text-right">จำนวนเงิน</th>
+                                  <th className="w-24"></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {list.map((e) => (
+                                  <tr key={e.id} className="border-t border-line">
+                                    <td className="py-1.5 pr-3">{e.entryDate ? formatThaiShortDate(e.entryDate) : "-"}</td>
+                                    <td className="py-1.5 pr-3">{e.description || "-"}</td>
+                                    <td className="py-1.5 pr-3">{FUND_SOURCE_LABELS[e.fundSource]}</td>
+                                    <td className="py-1.5 pr-3 text-right">{formatBaht(Number(e.amount))}</td>
+                                    <td className="py-1.5 text-right whitespace-nowrap">
+                                      <button onClick={() => editEntry(e)} className="text-navy-500 hover:text-navy-900 mr-3">
+                                        แก้ไข
+                                      </button>
+                                      <button onClick={() => deleteEntry(a.id, e)} className="text-bad hover:underline">
+                                        ลบ
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                          <div className="flex flex-wrap items-end gap-2">
+                            <div>
+                              <label className="block text-xs text-navy-500 mb-1">วันที่</label>
+                              <input
+                                type="date"
+                                value={form.date}
+                                onChange={(e) => setForm({ ...form, date: e.target.value })}
+                                className="text-sm rounded border border-line px-2 py-1.5"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-[180px]">
+                              <label className="block text-xs text-navy-500 mb-1">รายละเอียด</label>
+                              <input
+                                type="text"
+                                value={form.description}
+                                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                                placeholder="เช่น ค่าไฟฟ้า / เลขที่ฎีกา"
+                                className="w-full text-sm rounded border border-line px-2 py-1.5"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-navy-500 mb-1">แหล่งเงิน</label>
+                              <select
+                                value={form.fundSource}
+                                onChange={(e) => setForm({ ...form, fundSource: e.target.value as FundSource })}
+                                className="text-sm rounded border border-line px-2 py-1.5"
+                              >
+                                {(Object.keys(FUND_SOURCE_LABELS) as FundSource[]).map((k) => (
+                                  <option key={k} value={k}>
+                                    {FUND_SOURCE_LABELS[k]}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-navy-500 mb-1">จำนวนเงิน</label>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={form.amount}
+                                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                                onKeyDown={(e) => e.key === "Enter" && submitEntry(a.id)}
+                                className={inputCls(form.amount !== "" && parseAmount(form.amount) === null)}
+                              />
+                            </div>
+                            <button
+                              onClick={() => submitEntry(a.id)}
+                              disabled={entrySaving}
+                              className="rounded bg-navy-900 text-white text-sm px-3 py-2 hover:bg-navy-700 disabled:opacity-50"
+                            >
+                              {form.id ? "บันทึกการแก้ไข" : "เพิ่มรายการ"}
+                            </button>
+                            {form.id && (
+                              <button onClick={() => setForm(emptyForm())} className="text-sm text-navy-500 px-2 py-2">
+                                ยกเลิก
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   );
                 })}
               </tbody>

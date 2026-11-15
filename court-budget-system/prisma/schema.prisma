@@ -48,7 +48,8 @@ model ChartOfAccount {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  disbursements Disbursement[]
+  disbursements       Disbursement[]
+  disbursementEntries DisbursementEntry[]
 
   @@index([parentId])
   @@index([gfmisCode])
@@ -78,6 +79,34 @@ model Disbursement {
   updatedAt DateTime @updatedAt
 
   @@unique([accountId, fiscalYear, month])
+  @@index([fiscalYear, month])
+}
+
+// แหล่งเงินของรายการเบิกจ่าย
+enum FundSource {
+  BUDGET // เงินงบประมาณ
+  COURT_FEE // เงินค่าธรรมเนียมศาล
+}
+
+// รายการเบิกจ่ายย่อยแต่ละรายการ ของบัญชีหนึ่งในเดือน/ปีงบประมาณหนึ่ง
+// เมื่อมีรายการ ระบบรวมยอดไปเก็บใน Disbursement (spentBudgetFund / spentCourtFee / spentAmount) ให้อัตโนมัติ
+model DisbursementEntry {
+  id String @id @default(cuid())
+
+  account   ChartOfAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId String
+
+  fiscalYear Int // ปีงบประมาณ พ.ศ.
+  month      Int // 1-12 เดือนที่นับยอด
+
+  entryDate   DateTime? // วันที่เบิกจ่าย (ไม่บังคับ)
+  description String? // รายละเอียด เช่น ค่าไฟฟ้าเดือน ต.ค.
+  fundSource  FundSource @default(BUDGET)
+  amount      Decimal    @db.Decimal(15, 2)
+
+  createdAt DateTime @default(now())
+
+  @@index([accountId, fiscalYear, month])
   @@index([fiscalYear, month])
 }
 

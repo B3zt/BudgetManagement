@@ -41,6 +41,26 @@ export interface Disbursement {
   account?: ChartOfAccount;
 }
 
+export type FundSource = "BUDGET" | "COURT_FEE";
+
+export const FUND_SOURCE_LABELS: Record<FundSource, string> = {
+  BUDGET: "เงินงบประมาณ",
+  COURT_FEE: "เงินค่าธรรมเนียมศาล",
+};
+
+// รายการเบิกจ่ายย่อย (หนึ่งบัญชี ต่อเดือน มีได้หลายรายการ)
+export interface DisbursementEntry {
+  id: string;
+  accountId: string;
+  fiscalYear: number;
+  month: number;
+  entryDate: string | null;
+  description: string | null;
+  fundSource: FundSource;
+  amount: string; // Decimal serialized as string
+  createdAt: string;
+}
+
 export interface TransferItem {
   id: string;
   transferId: string;
