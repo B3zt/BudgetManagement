@@ -62,7 +62,7 @@ export default function AccountForm({
           {mode === "create"
             ? parent
               ? `เพิ่มรายการย่อยภายใต้ ${parent.code} · ${parent.nameOffice}`
-              : "เพิ่มรายการบัญชีระดับ 1"
+              : "เพิ่มรายการผังบัญชี"
             : `แก้ไขรายการ ${account?.code}`}
         </h3>
       </div>

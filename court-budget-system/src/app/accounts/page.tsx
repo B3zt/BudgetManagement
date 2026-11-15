@@ -143,7 +143,7 @@ export default function AccountsPage() {
             }}
             className="shrink-0 rounded bg-navy-900 text-white text-sm font-medium px-4 py-2.5 hover:bg-navy-700"
           >
-            + เพิ่มบัญชีระดับ 1
+            + เพิ่มผังบัญชี
           </button>
         </div>
         <div className="flex gap-3 mt-4 text-xs text-navy-500">
