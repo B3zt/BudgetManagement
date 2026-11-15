@@ -7,6 +7,7 @@ const navItems = [
   { href: "/accounts", label: "ผังบัญชี", active: true },
   { href: "/disbursements", label: "บันทึกข้อมูลเบิกจ่าย", active: true },
   { href: "/reports/disbursement", label: "รายงานผลเบิกจ่าย 4 หมวด", active: true },
+  { href: "/reports/fund", label: "รายงานผลเบิกจ่ายตามแหล่งเงิน", active: true },
   { href: "/transfers", label: "แบบแจ้งโอนเงินงบประมาณ", active: true },
   { href: "/reports/periodic", label: "รายงานรายเดือน / รายไตรมาส", active: true },
 ];
