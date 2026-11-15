@@ -65,7 +65,13 @@ model Disbursement {
   month      Int // 1-12
 
   budgetAmount Decimal @db.Decimal(15, 2) // งบประมาณที่ได้รับจัดสรร
-  spentAmount  Decimal @db.Decimal(15, 2) // ยอดเบิกจ่ายจริง
+
+  // ยอดเบิกจ่ายจริงแยกตามแหล่งเงิน (ตามรายงานผลการเบิกจ่าย: เงินงบประมาณ / เงินค่าธรรมเนียมศาล)
+  spentBudgetFund Decimal @default(0) @db.Decimal(15, 2) // เบิกจ่ายจากเงินงบประมาณ
+  spentCourtFee   Decimal @default(0) @db.Decimal(15, 2) // เบิกจ่ายจากเงินค่าธรรมเนียมศาล
+
+  // ยอดเบิกจ่ายจริงรวมทั้งหมด = spentBudgetFund + spentCourtFee (API คำนวณและบันทึกให้ทุกครั้ง; รายงานเดิมอ่านค่านี้)
+  spentAmount Decimal @db.Decimal(15, 2)
 
   note      String?
   createdAt DateTime @default(now())

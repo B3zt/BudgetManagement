@@ -32,7 +32,9 @@ export interface Disbursement {
   fiscalYear: number;
   month: number;
   budgetAmount: string; // Decimal serialized as string over JSON
-  spentAmount: string;
+  spentBudgetFund: string; // เบิกจ่ายจากเงินงบประมาณ
+  spentCourtFee: string; // เบิกจ่ายจากเงินค่าธรรมเนียมศาล
+  spentAmount: string; // รวมทั้งหมด = spentBudgetFund + spentCourtFee
   note: string | null;
   createdAt: string;
   updatedAt: string;
