@@ -44,17 +44,6 @@ export async function POST(req: NextRequest) {
       );
     }
     parentId = parent.id;
-
-    // บัญชีที่มียอดเบิกจ่าย/รายการเบิกจ่ายแล้ว จะกลายเป็นบัญชีแม่ไม่ได้ (ยอดเดิมจะไม่ถูกนับ)
-    const used =
-      (await prisma.disbursement.count({ where: { accountId: parent.id } })) +
-      (await prisma.disbursementEntry.count({ where: { accountId: parent.id } }));
-    if (used > 0) {
-      return NextResponse.json(
-        { error: `บัญชี ${parentCode} มีข้อมูลเบิกจ่ายอยู่แล้ว จึงเพิ่มรายการย่อยไม่ได้ ให้เพิ่มเป็นรายการระดับเดียวกันแทน` },
-        { status: 400 }
-      );
-    }
   }
 
   if (level > 5) {

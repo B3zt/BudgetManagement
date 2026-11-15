@@ -39,9 +39,6 @@ export default function DisbursementsEntryPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [form, setForm] = useState<EntryForm>(emptyForm());
   const [entrySaving, setEntrySaving] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [newAcc, setNewAcc] = useState<{ parentId: string | null; code: string; name: string } | null>(null);
-  const [accSaving, setAccSaving] = useState(false);
 
   const accountsById = useMemo(() => {
     const m = new Map<string, ChartOfAccount>();
@@ -54,10 +51,7 @@ export default function DisbursementsEntryPage() {
   useEffect(() => {
     fetch("/api/accounts")
       .then((r) => r.json())
-      .then((json) => {
-        setAccounts(json.data);
-        setReady(true);
-      })
+      .then((json) => setAccounts(json.data))
       .finally(() => setLoading(false));
   }, []);
 
@@ -168,51 +162,9 @@ export default function DisbursementsEntryPage() {
   };
 
   useEffect(() => {
-    // โหลดใหม่เฉพาะเมื่อเปลี่ยนปี/เดือน (การเพิ่มบัญชีใหม่ไม่ล้างข้อมูลที่ยังไม่ได้บันทึก)
-    if (ready) loadPeriod();
+    if (accounts.length > 0) loadPeriod();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, fiscalYear, month]);
-
-  // เสนอรหัสถัดไปใต้บัญชีแม่ (หรือระดับ 1 เมื่อไม่มีแม่)
-  const suggestCode = (parentId: string | null) => {
-    const parent = parentId ? accountsById.get(parentId) : undefined;
-    const siblings = accounts.filter((a) => (a.parentId ?? null) === (parentId ?? null));
-    const last = siblings.reduce((mx, a) => Math.max(mx, Number(a.code.split(".").pop()) || 0), 0);
-    return parent ? `${parent.code}.${last + 1}` : String(last + 1);
-  };
-
-  const startAddAccount = (parentId: string | null) => setNewAcc({ parentId, code: suggestCode(parentId), name: "" });
-
-  const submitAccount = async () => {
-    if (!newAcc) return;
-    if (!newAcc.name.trim()) {
-      alert("กรุณาระบุชื่อรายการ");
-      return;
-    }
-    setAccSaving(true);
-    try {
-      const res = await fetch("/api/accounts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: newAcc.code.trim(), nameOffice: newAcc.name.trim() }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
-      const created: ChartOfAccount = json.data;
-      setAccounts((prev) => [...prev, created].sort(sortByCode));
-      setRows((prev) => ({
-        ...prev,
-        [created.id]: { account: created, budget: "", fund: "", courtFee: "", dirty: false, saving: false, saved: false },
-      }));
-      setSearch("");
-      setCategoryFilter("ALL");
-      setNewAcc(null);
-    } catch (err) {
-      alert(err instanceof Error && err.message ? err.message : "เพิ่มรายการไม่สำเร็จ");
-    } finally {
-      setAccSaving(false);
-    }
-  };
+  }, [accounts, fiscalYear, month]);
 
   // ยอดของบัญชีที่มีรายการย่อย = ผลรวมของรายการปลายทางทั้งหมดใต้บัญชีนั้น (ตามรายงานตัวอย่าง)
   const sums = useMemo(() => {
@@ -399,15 +351,9 @@ export default function DisbursementsEntryPage() {
             />
           </div>
           <button
-            onClick={() => startAddAccount(null)}
-            className="ml-auto rounded border border-line text-navy-700 text-sm font-medium px-4 py-2.5 hover:border-brass-500"
-          >
-            + เพิ่มรายการ (ระดับ 1)
-          </button>
-          <button
             onClick={saveAllDirty}
             disabled={dirtyCount === 0}
-            className="rounded bg-navy-900 text-white text-sm font-medium px-4 py-2.5 hover:bg-navy-700 disabled:opacity-40"
+            className="ml-auto rounded bg-navy-900 text-white text-sm font-medium px-4 py-2.5 hover:bg-navy-700 disabled:opacity-40"
           >
             บันทึกที่แก้ไขทั้งหมด {dirtyCount > 0 && `(${dirtyCount})`}
           </button>
@@ -416,52 +362,6 @@ export default function DisbursementsEntryPage() {
 
       <div className="px-8 py-6">
         {loading && <p className="text-sm text-navy-300">กำลังโหลด...</p>}
-        {newAcc && (
-          <div className="bg-white rounded-md border border-brass-500 p-4 mb-4">
-            <p className="text-sm font-medium text-navy-900 mb-3">
-              เพิ่มรายการใหม่{" "}
-              {newAcc.parentId ? (
-                <span className="text-navy-500 font-normal">
-                  ใต้ {accountsById.get(newAcc.parentId)?.code} {accountsById.get(newAcc.parentId)?.nameOffice}
-                </span>
-              ) : (
-                <span className="text-navy-500 font-normal">ระดับ 1</span>
-              )}
-            </p>
-            <div className="flex flex-wrap items-end gap-3">
-              <div>
-                <label className="block text-xs text-navy-500 mb-1">รหัส</label>
-                <input
-                  type="text"
-                  value={newAcc.code}
-                  onChange={(e) => setNewAcc({ ...newAcc, code: e.target.value })}
-                  className="w-36 text-sm font-mono rounded border border-line px-2 py-1.5"
-                />
-              </div>
-              <div className="flex-1 min-w-[240px]">
-                <label className="block text-xs text-navy-500 mb-1">ชื่อรายการ</label>
-                <input
-                  type="text"
-                  autoFocus
-                  value={newAcc.name}
-                  onChange={(e) => setNewAcc({ ...newAcc, name: e.target.value })}
-                  onKeyDown={(e) => e.key === "Enter" && submitAccount()}
-                  className="w-full text-sm rounded border border-line px-2 py-1.5"
-                />
-              </div>
-              <button
-                onClick={submitAccount}
-                disabled={accSaving}
-                className="rounded bg-navy-900 text-white text-sm px-4 py-2 hover:bg-navy-700 disabled:opacity-50"
-              >
-                เพิ่มรายการ
-              </button>
-              <button onClick={() => setNewAcc(null)} className="text-sm text-navy-500 px-2 py-2">
-                ยกเลิก
-              </button>
-            </div>
-          </div>
-        )}
         {!loading && (
           <div className="bg-white rounded-md border border-line overflow-x-auto">
             <table className="w-full text-sm min-w-[1000px]">
@@ -509,14 +409,6 @@ export default function DisbursementsEntryPage() {
                         <td className="py-2 pr-4" style={indent}>
                           <span className="font-mono text-xs text-navy-500 mr-2">{a.code}</span>
                           {a.nameOffice}
-                          {a.level < 5 && (
-                            <button
-                              onClick={() => startAddAccount(a.id)}
-                              className="ml-3 text-xs rounded border border-line text-navy-500 px-2 py-0.5 font-normal hover:border-brass-500"
-                            >
-                              + รายการย่อย
-                            </button>
-                          )}
                         </td>
                         <td className="px-4 py-2 text-right">{dash(s.budget)}</td>
                         <td className="px-4 py-2 text-right border-l border-line">{dash(s.fund)}</td>
@@ -547,14 +439,6 @@ export default function DisbursementsEntryPage() {
                         >
                           {hasEntries ? `รายการเบิกจ่าย (${list.length})` : "+ เพิ่มรายการเบิกจ่าย"}
                         </button>
-                        {a.level < 5 && (
-                          <button
-                            onClick={() => startAddAccount(a.id)}
-                            className="ml-2 text-xs rounded border border-line text-navy-500 px-2 py-0.5 hover:border-brass-500"
-                          >
-                            + รายการย่อย
-                          </button>
-                        )}
                       </td>
                       {(["budget", "fund", "courtFee"] as Field[]).map((f, i) => {
                         const locked = hasEntries && f !== "budget"; // ยอดเบิกจ่ายคำนวณจากรายการย่อย
