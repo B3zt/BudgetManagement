@@ -3,17 +3,22 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ChartOfAccount, Disbursement, BudgetCategory } from "@/lib/types";
 import { CATEGORY_LABELS, categoryOfAccount } from "@/lib/accountUtils";
-import {
-  THAI_MONTHS,
-  currentThaiFiscalYear,
-  formatBaht,
-  formatPercent,
-  monthLabel,
-  fiscalQuarterOf,
-  FISCAL_QUARTER_MONTHS,
-} from "@/lib/thai";
+import { formatBaht, formatPercent, monthLabel } from "@/lib/thai";
 
 const CATEGORY_ORDER: BudgetCategory[] = ["COMPENSATION", "SERVICES", "MATERIALS", "UTILITIES"];
+
+// รายงานนี้แสดงตามปีปฏิทิน มกราคม - ธันวาคม
+const CALENDAR_MONTH_ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+// ไตรมาสตามปีปฏิทิน: Q1 ม.ค.-มี.ค., Q2 เม.ย.-มิ.ย., Q3 ก.ค.-ก.ย., Q4 ต.ค.-ธ.ค.
+const CALENDAR_QUARTER_MONTHS: Record<number, number[]> = {
+  1: [1, 2, 3],
+  2: [4, 5, 6],
+  3: [7, 8, 9],
+  4: [10, 11, 12],
+};
+
+const calendarQuarterOf = (month: number) => Math.ceil(month / 3);
 
 type ViewMode = "monthly" | "quarterly";
 
@@ -24,10 +29,18 @@ type PeriodTotals = {
   spent: number;
 };
 
+const emptyTotals = (label: string): PeriodTotals => ({
+  label,
+  byCategory: { COMPENSATION: 0, SERVICES: 0, MATERIALS: 0, UTILITIES: 0 },
+  budget: 0,
+  spent: 0,
+});
+
 export default function PeriodicReportPage() {
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [disbursements, setDisbursements] = useState<Disbursement[]>([]);
-  const [fiscalYear, setFiscalYear] = useState(currentThaiFiscalYear());
+  // ปี พ.ศ. ตามปีปฏิทิน (ม.ค. - ธ.ค.)
+  const [year, setYear] = useState(new Date().getFullYear() + 543);
   const [view, setView] = useState<ViewMode>("monthly");
   const [loading, setLoading] = useState(true);
 
@@ -37,13 +50,21 @@ export default function PeriodicReportPage() {
       .then((json) => setAccounts(json.data));
   }, []);
 
+  // ข้อมูลเก็บตามปีงบประมาณ (ต.ค. - ก.ย.) จึงต้องดึง 2 ปีงบประมาณมาประกอบเป็นปีปฏิทินเดียว:
+  // ม.ค. - ก.ย. ของปี Y อยู่ในปีงบประมาณ Y และ ต.ค. - ธ.ค. ของปี Y อยู่ในปีงบประมาณ Y+1
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/disbursements?fiscalYear=${fiscalYear}`)
-      .then((r) => r.json())
-      .then((json) => setDisbursements(json.data ?? []))
+    Promise.all([
+      fetch(`/api/disbursements?fiscalYear=${year}`).then((r) => r.json()),
+      fetch(`/api/disbursements?fiscalYear=${year + 1}`).then((r) => r.json()),
+    ])
+      .then(([a, b]) => {
+        const janToSep: Disbursement[] = (a.data ?? []).filter((d: Disbursement) => d.month <= 9);
+        const octToDec: Disbursement[] = (b.data ?? []).filter((d: Disbursement) => d.month >= 10);
+        setDisbursements([...janToSep, ...octToDec]);
+      })
       .finally(() => setLoading(false));
-  }, [fiscalYear]);
+  }, [year]);
 
   const accountsById = useMemo(() => {
     const m = new Map<string, ChartOfAccount>();
@@ -51,19 +72,9 @@ export default function PeriodicReportPage() {
     return m;
   }, [accounts]);
 
-  // ลำดับเดือนตามปีงบประมาณไทย: ต.ค. - ก.ย.
-  const fiscalMonthOrder = [10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-
   const monthlyTotals = useMemo(() => {
     const totals = new Map<number, PeriodTotals>();
-    fiscalMonthOrder.forEach((m) => {
-      totals.set(m, {
-        label: monthLabel(m),
-        byCategory: { COMPENSATION: 0, SERVICES: 0, MATERIALS: 0, UTILITIES: 0 },
-        budget: 0,
-        spent: 0,
-      });
-    });
+    CALENDAR_MONTH_ORDER.forEach((m) => totals.set(m, emptyTotals(monthLabel(m))));
 
     disbursements.forEach((d) => {
       const acc = d.account ?? accountsById.get(d.accountId);
@@ -84,22 +95,16 @@ export default function PeriodicReportPage() {
   const quarterlyTotals = useMemo(() => {
     const totals = new Map<number, PeriodTotals>();
     [1, 2, 3, 4].forEach((q) => {
-      const months = FISCAL_QUARTER_MONTHS[q];
+      const months = CALENDAR_QUARTER_MONTHS[q];
       const monthNames = months.map((m) => monthLabel(m).slice(0, 3)).join(" – ");
-      totals.set(q, {
-        label: `ไตรมาส ${q} (${monthNames})`,
-        byCategory: { COMPENSATION: 0, SERVICES: 0, MATERIALS: 0, UTILITIES: 0 },
-        budget: 0,
-        spent: 0,
-      });
+      totals.set(q, emptyTotals(`ไตรมาส ${q} (${monthNames})`));
     });
 
     disbursements.forEach((d) => {
       const acc = d.account ?? accountsById.get(d.accountId);
       if (!acc) return;
       const cat = categoryOfAccount(acc.id, accountsById);
-      const q = fiscalQuarterOf(d.month);
-      const t = totals.get(q);
+      const t = totals.get(calendarQuarterOf(d.month));
       if (!t) return;
       const spent = Number(d.spentAmount);
       const budget = Number(d.budgetAmount);
@@ -127,15 +132,17 @@ export default function PeriodicReportPage() {
     <div className="min-h-screen">
       <header className="no-print border-b border-line bg-white px-8 py-5">
         <h1 className="font-display text-xl text-navy-900">รายงานการใช้จ่ายเงินงบประมาณ</h1>
-        <p className="text-sm text-navy-500 mt-0.5">สรุปยอดเบิกจ่ายจริงรายเดือนหรือรายไตรมาส แยกตามหมวดงบประมาณ</p>
+        <p className="text-sm text-navy-500 mt-0.5">
+          สรุปยอดเบิกจ่ายจริงรายเดือนหรือรายไตรมาส ตั้งแต่เดือนมกราคมถึงธันวาคม แยกตามหมวดงบประมาณ
+        </p>
 
         <div className="flex flex-wrap items-end gap-4 mt-4">
           <div>
-            <label className="block text-xs font-medium text-navy-500 mb-1">ปีงบประมาณ (พ.ศ.)</label>
+            <label className="block text-xs font-medium text-navy-500 mb-1">ปี พ.ศ. (ม.ค. – ธ.ค.)</label>
             <input
               type="number"
-              value={fiscalYear}
-              onChange={(e) => setFiscalYear(Number(e.target.value))}
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
               className="w-28 text-sm rounded border border-line px-3 py-2 focus:outline-none focus:ring-1 focus:ring-brass-500"
             />
           </div>
@@ -170,7 +177,7 @@ export default function PeriodicReportPage() {
           <h1 className="font-display text-lg">
             รายงานการใช้จ่ายเงินงบประมาณ {view === "monthly" ? "รายเดือน" : "รายไตรมาส"}
           </h1>
-          <p className="text-sm mt-1">ปีงบประมาณ พ.ศ. {fiscalYear}</p>
+          <p className="text-sm mt-1">ประจำปี พ.ศ. {year} (มกราคม – ธันวาคม)</p>
         </div>
 
         {loading && <p className="text-sm text-navy-300">กำลังโหลด...</p>}
@@ -208,7 +215,7 @@ export default function PeriodicReportPage() {
               </tbody>
               <tfoot>
                 <tr className="border-t border-line font-medium bg-navy-50">
-                  <td className="px-4 py-2.5">รวมทั้งปีงบประมาณ</td>
+                  <td className="px-4 py-2.5">รวมทั้งปี (ม.ค. – ธ.ค.)</td>
                   {CATEGORY_ORDER.map((c) => (
                     <td key={c} className="px-4 py-2.5 text-right">
                       {formatBaht(grand.byCategory[c])}
