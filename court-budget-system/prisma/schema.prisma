@@ -10,11 +10,14 @@ datasource db {
   url       = env("DATABASE_URL")
 }
 
-enum BudgetCategory {
-  COMPENSATION // ค่าตอบแทน
-  SERVICES // ค่าใช้สอย
-  MATERIALS // ค่าวัสดุ
-  UTILITIES // ค่าสาธารณูปโภค
+// ตารางอ้างอิงผังบัญชี GFMIS (ใช้เป็นตัวเลือกใน selection box)
+model GfmisAccount {
+  id        String   @id @default(cuid())
+  code      String   @unique // รหัสบัญชี GFMIS
+  name      String // ชื่อบัญชีตามผังบัญชี GFMIS
+  createdAt DateTime @default(now())
+
+  @@index([name])
 }
 
 model ChartOfAccount {
@@ -29,14 +32,11 @@ model ChartOfAccount {
   // ชื่อบัญชีของสำนักงาน
   nameOffice String
 
-  // รหัสบัญชี GFMIS
+  // รหัสบัญชี GFMIS (เลือกจาก GfmisAccount)
   gfmisCode String?
 
-  // ชื่อบัญชีตามผังบัญชี GFMIS
+  // ชื่อบัญชีตามผังบัญชี GFMIS (เลือกจาก GfmisAccount)
   gfmisName String?
-
-  // หมวดงบประมาณ ใช้กับรายการระดับบนสุด (level 1) เป็นหลัก
-  category BudgetCategory?
 
   // ลำดับชั้น (self relation)
   parentId String?
@@ -51,7 +51,7 @@ model ChartOfAccount {
   disbursements Disbursement[]
 
   @@index([parentId])
-  @@index([category])
+  @@index([gfmisCode])
 }
 
 // รายการเบิกจ่ายจริงต่อบัญชี ต่อเดือน (ใช้ทำรายงานรายเดือน/รายไตรมาส และรายงาน 4 หมวด)

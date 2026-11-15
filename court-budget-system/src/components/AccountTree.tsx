@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type { AccountNode } from "@/lib/types";
-import { CATEGORY_LABELS } from "@/lib/accountUtils";
 
 function TreeNode({
   node,
@@ -47,9 +46,12 @@ function TreeNode({
         <span className={`truncate ${!node.isActive ? "line-through text-navy-300" : ""}`}>
           {node.nameOffice}
         </span>
-        {node.category && depth === 0 && (
-          <span className="ml-auto shrink-0 text-[10px] rounded-sm bg-navy-100 text-navy-700 px-1.5 py-0.5">
-            {CATEGORY_LABELS[node.category]}
+        {node.gfmisCode && (
+          <span
+            title={node.gfmisName ?? undefined}
+            className="ml-auto shrink-0 font-mono text-[10px] rounded-sm bg-navy-100 text-navy-700 px-1.5 py-0.5"
+          >
+            {node.gfmisCode}
           </span>
         )}
       </button>

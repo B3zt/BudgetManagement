@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import AccountTree from "@/components/AccountTree";
 import AccountForm, { AccountFormValues } from "@/components/AccountForm";
 import type { AccountNode, ChartOfAccount } from "@/lib/types";
-import { buildTree, CATEGORY_LABELS, sortByCode } from "@/lib/accountUtils";
+import { buildTree, sortByCode } from "@/lib/accountUtils";
 
 type PanelMode = "detail" | "create-root" | "create-child" | "edit";
 
@@ -187,6 +187,9 @@ export default function AccountsPage() {
                   >
                     <span className="font-mono text-[11px] text-navy-500 shrink-0">{a.code}</span>
                     <span className="truncate">{a.nameOffice}</span>
+                    {a.gfmisCode && (
+                      <span className="ml-auto shrink-0 font-mono text-[10px] text-navy-500">{a.gfmisCode}</span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -248,11 +251,6 @@ export default function AccountsPage() {
                       <div>
                         <p className="font-mono text-sm text-brass-700">{selected.code}</p>
                         <h2 className="font-display text-lg text-navy-900 mt-1">{selected.nameOffice}</h2>
-                        {selected.category && (
-                          <span className="inline-block mt-2 text-xs rounded-sm bg-navy-100 text-navy-700 px-2 py-1">
-                            {CATEGORY_LABELS[selected.category]}
-                          </span>
-                        )}
                       </div>
                       <div className="flex gap-2 shrink-0">
                         <button
@@ -334,6 +332,7 @@ export default function AccountsPage() {
                             <th className="px-4 py-2.5 font-medium">รหัสบัญชี</th>
                             <th className="px-4 py-2.5 font-medium">ชื่อบัญชีของสำนักงาน</th>
                             <th className="px-4 py-2.5 font-medium">รหัส GFMIS</th>
+                            <th className="px-4 py-2.5 font-medium">ชื่อบัญชี GFMIS</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -346,6 +345,7 @@ export default function AccountsPage() {
                               <td className="px-4 py-2.5 font-mono text-xs text-navy-700">{c.code}</td>
                               <td className="px-4 py-2.5">{c.nameOffice}</td>
                               <td className="px-4 py-2.5 font-mono text-xs text-navy-500">{c.gfmisCode || "—"}</td>
+                              <td className="px-4 py-2.5 text-navy-700">{c.gfmisName || "—"}</td>
                             </tr>
                           ))}
                         </tbody>
