@@ -14,7 +14,7 @@ export async function GET() {
 // POST /api/accounts - เพิ่มรายการบัญชีใหม่
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { code, nameOffice, gfmisCode, gfmisName, category, note } = body;
+  const { code, nameOffice, gfmisCode, note } = body;
 
   if (!code || !isValidAccountCode(code)) {
     return NextResponse.json(
@@ -50,14 +50,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "รหัสบัญชีมีความลึกเกิน 5 ระดับ" }, { status: 400 });
   }
 
+  // รหัสและชื่อ GFMIS ต้องมาจากตารางอ้างอิง (เลือกจาก selection box)
+  let gfmis: { code: string; name: string } | null = null;
+  if (gfmisCode?.trim()) {
+    gfmis = await prisma.gfmisAccount.findUnique({ where: { code: gfmisCode.trim() } });
+    if (!gfmis) {
+      return NextResponse.json({ error: `ไม่พบรหัส GFMIS ${gfmisCode} ในตารางอ้างอิง` }, { status: 400 });
+    }
+  }
+
   const created = await prisma.chartOfAccount.create({
     data: {
       code,
       level,
       nameOffice: nameOffice.trim(),
-      gfmisCode: gfmisCode?.trim() || null,
-      gfmisName: gfmisName?.trim() || null,
-      category: category || null,
+      gfmisCode: gfmis?.code ?? null,
+      gfmisName: gfmis?.name ?? null,
       note: note?.trim() || null,
       parentId,
     },

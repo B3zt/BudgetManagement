@@ -15,7 +15,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 // PUT - แก้ไขข้อมูลบัญชี (ไม่อนุญาตให้แก้ไขรหัสบัญชี/ลำดับชั้น เพื่อคงความสอดคล้องของโครงสร้าง)
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json();
-  const { nameOffice, gfmisCode, gfmisName, category, note, isActive } = body;
+  const { nameOffice, gfmisCode, note, isActive } = body;
 
   const existing = await prisma.chartOfAccount.findUnique({ where: { id: params.id } });
   if (!existing) {
@@ -26,13 +26,25 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ error: "กรุณาระบุชื่อบัญชีของสำนักงาน" }, { status: 400 });
   }
 
+  // GFMIS: เลือกจากตารางอ้างอิง แล้วบันทึกรหัสและชื่อควบคู่กัน (ส่งค่าว่าง = ล้างการเลือก)
+  let gfmisData: { gfmisCode: string | null; gfmisName: string | null } | null = null;
+  if (gfmisCode !== undefined) {
+    if (!gfmisCode || !String(gfmisCode).trim()) {
+      gfmisData = { gfmisCode: null, gfmisName: null };
+    } else {
+      const gfmis = await prisma.gfmisAccount.findUnique({ where: { code: String(gfmisCode).trim() } });
+      if (!gfmis) {
+        return NextResponse.json({ error: `ไม่พบรหัส GFMIS ${gfmisCode} ในตารางอ้างอิง` }, { status: 400 });
+      }
+      gfmisData = { gfmisCode: gfmis.code, gfmisName: gfmis.name };
+    }
+  }
+
   const updated = await prisma.chartOfAccount.update({
     where: { id: params.id },
     data: {
       ...(nameOffice !== undefined && { nameOffice: nameOffice.trim() }),
-      ...(gfmisCode !== undefined && { gfmisCode: gfmisCode?.trim() || null }),
-      ...(gfmisName !== undefined && { gfmisName: gfmisName?.trim() || null }),
-      ...(category !== undefined && { category: category || null }),
+      ...(gfmisData ?? {}),
       ...(note !== undefined && { note: note?.trim() || null }),
       ...(isActive !== undefined && { isActive }),
     },
