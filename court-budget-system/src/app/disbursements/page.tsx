@@ -425,10 +425,17 @@ export default function DisbursementsEntryPage() {
                   if (isParent) {
                     const s = sums.get(a.id) ?? { budget: 0, fund: 0, courtFee: 0 };
                     return (
-                      <tr key={a.id} className="border-t border-line bg-navy-50/50 font-medium">
+                      <Fragment key={a.id}>
+                      <tr className="border-t border-line bg-navy-50/50 font-medium">
                         <td className="py-2 pr-4" style={indent}>
                           <span className="font-mono text-xs text-navy-500 mr-2">{a.code}</span>
                           {a.nameOffice}
+                          <button
+                            onClick={() => toggleEntries(a.id)}
+                            className="ml-3 text-xs font-medium rounded border border-navy-900 bg-navy-900 text-white px-2.5 py-1 whitespace-nowrap hover:bg-navy-700"
+                          >
+                            + เพิ่มรายการเบิกจ่าย
+                          </button>
                         </td>
                         <td className="px-4 py-2 text-right">{dash(s.budget)}</td>
                         <td className="px-4 py-2 text-right border-l border-line">{dash(s.fund)}</td>
@@ -436,6 +443,14 @@ export default function DisbursementsEntryPage() {
                         <td className="px-4 py-2 text-right">{dash(s.fund + s.courtFee)}</td>
                         <td></td>
                       </tr>
+                      {openId === a.id && (
+                        <tr className="bg-navy-50/40">
+                          <td colSpan={6} className="px-4 py-3 text-sm text-navy-500" style={{ paddingLeft: `${16 + a.level * 18}px` }}>
+                            บัญชีนี้มีรายการย่อย — กดปุ่ม "+ เพิ่มรายการเบิกจ่าย" ที่บรรทัดย่อยด้านล่างที่ต้องการ
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
                     );
                   }
 
@@ -451,10 +466,10 @@ export default function DisbursementsEntryPage() {
                         {a.nameOffice}
                         <button
                           onClick={() => toggleEntries(a.id)}
-                          className={`ml-3 text-xs rounded border px-2 py-0.5 ${
+                          className={`ml-3 text-xs font-medium rounded border px-2.5 py-1 whitespace-nowrap ${
                             hasEntries
                               ? "border-brass-500 text-brass-700 bg-brass-50"
-                              : "border-line text-navy-500 hover:border-brass-500"
+                              : "border-navy-900 bg-navy-900 text-white hover:bg-navy-700"
                           }`}
                         >
                           {hasEntries ? `รายการเบิกจ่าย (${list.length})` : "+ เพิ่มรายการเบิกจ่าย"}
