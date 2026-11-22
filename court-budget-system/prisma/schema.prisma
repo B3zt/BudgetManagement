@@ -121,7 +121,7 @@ model BudgetTransfer {
   documentDate DateTime // ลงวันที่
   transferDate DateTime // วันที่โอนเข้าบัญชี
   month        Int // ประจำเดือน 1-12
-  quarter      Int // ประจำไตรมาส 1-4 (ไตรมาสปีงบประมาณ)
+  quarter      Int // ประจำไตรมาส 1-4 (Q1 = ม.ค.-มี.ค., Q4 = ต.ค.-ธ.ค.)
 
   fromUnit String // โอนจากหน่วยงาน
   toUnit   String // ถึงหน่วยงาน

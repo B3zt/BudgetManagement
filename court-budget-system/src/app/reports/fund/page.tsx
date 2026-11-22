@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ChartOfAccount, Disbursement } from "@/lib/types";
 import { sortByCode } from "@/lib/accountUtils";
 import {
+  QUARTER_MONTHS,
   THAI_MONTHS,
   formatBaht,
   formatThaiLongDate,
@@ -18,18 +19,10 @@ const DEFAULT_ACTIVITY = "กิจกรรมสนับสนุนการ
 const dash = (n: number) => (n === 0 ? "-" : formatBaht(n));
 
 // รายงานนี้นับตามปีปฏิทิน (ม.ค. - ธ.ค.) เหมือนรายงานรายเดือน/รายไตรมาส
-// ไตรมาส: Q1 ม.ค.-มี.ค., Q2 เม.ย.-มิ.ย., Q3 ก.ค.-ก.ย., Q4 ต.ค.-ธ.ค.
-const CALENDAR_QUARTER_MONTHS: Record<number, number[]> = {
-  1: [1, 2, 3],
-  2: [4, 5, 6],
-  3: [7, 8, 9],
-  4: [10, 11, 12],
-};
-
 // period: "ALL" | "Q1".."Q4" | "M<เดือน>"
 function monthsOfPeriod(period: string): number[] {
   if (period === "ALL") return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-  if (period.startsWith("Q")) return CALENDAR_QUARTER_MONTHS[Number(period.slice(1))] ?? [];
+  if (period.startsWith("Q")) return QUARTER_MONTHS[Number(period.slice(1))] ?? [];
   if (period.startsWith("M")) return [Number(period.slice(1))];
   return [];
 }
@@ -192,7 +185,7 @@ export default function FundReportPage() {
               <option value="ALL">ทั้งปี (ม.ค. - ธ.ค.)</option>
               {[1, 2, 3, 4].map((q) => (
                 <option key={q} value={`Q${q}`}>
-                  ไตรมาสที่ {q} ({CALENDAR_QUARTER_MONTHS[q].map((m) => monthLabel(m).slice(0, 3)).join(" – ")})
+                  ไตรมาสที่ {q} ({QUARTER_MONTHS[q].map((m) => monthLabel(m).slice(0, 3)).join(" – ")})
                 </option>
               ))}
               {THAI_MONTHS.map((m) => (

@@ -27,19 +27,16 @@ export function currentThaiFiscalYear(): number {
   return month >= 10 ? beYear + 1 : beYear;
 }
 
-// ไตรมาสงบประมาณ: Q1 ต.ค.-ธ.ค., Q2 ม.ค.-มี.ค., Q3 เม.ย.-มิ.ย., Q4 ก.ค.-ก.ย.
-export function fiscalQuarterOf(month: number): number {
-  if (month >= 10 && month <= 12) return 1;
-  if (month >= 1 && month <= 3) return 2;
-  if (month >= 4 && month <= 6) return 3;
-  return 4;
+// ไตรมาส (ใช้ทุกหน้า): Q1 ม.ค.-มี.ค., Q2 เม.ย.-มิ.ย., Q3 ก.ค.-ก.ย., Q4 ต.ค.-ธ.ค.
+export function quarterOf(month: number): number {
+  return Math.ceil(month / 3);
 }
 
-export const FISCAL_QUARTER_MONTHS: Record<number, number[]> = {
-  1: [10, 11, 12],
-  2: [1, 2, 3],
-  3: [4, 5, 6],
-  4: [7, 8, 9],
+export const QUARTER_MONTHS: Record<number, number[]> = {
+  1: [1, 2, 3],
+  2: [4, 5, 6],
+  3: [7, 8, 9],
+  4: [10, 11, 12],
 };
 
 // จากวันที่รูปแบบ yyyy-mm-dd (ค.ศ. จาก <input type="date">) หาเดือน ไตรมาส และปีงบประมาณ (พ.ศ.)
@@ -50,7 +47,7 @@ export function fiscalInfoFromDateString(s: string): { month: number; quarter: n
   const month = Number(m[2]);
   if (month < 1 || month > 12) return null;
   const be = year + 543;
-  return { month, quarter: fiscalQuarterOf(month), fiscalYear: month >= 10 ? be + 1 : be };
+  return { month, quarter: quarterOf(month), fiscalYear: month >= 10 ? be + 1 : be };
 }
 
 // วันที่แบบย่อ เช่น "15 ต.ค. 68" (ใช้ UTC เพราะวันที่เก็บเป็นเที่ยงคืน UTC ของวันนั้น)

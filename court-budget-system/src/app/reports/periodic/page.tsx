@@ -3,22 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ChartOfAccount, Disbursement, BudgetCategory } from "@/lib/types";
 import { CATEGORY_LABELS, categoryOfAccount } from "@/lib/accountUtils";
-import { formatBaht, formatPercent, monthLabel } from "@/lib/thai";
+import { QUARTER_MONTHS, formatBaht, formatPercent, monthLabel, quarterOf } from "@/lib/thai";
 
 const CATEGORY_ORDER: BudgetCategory[] = ["COMPENSATION", "SERVICES", "MATERIALS", "UTILITIES"];
 
 // รายงานนี้แสดงตามปีปฏิทิน มกราคม - ธันวาคม
 const CALENDAR_MONTH_ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-
-// ไตรมาสตามปีปฏิทิน: Q1 ม.ค.-มี.ค., Q2 เม.ย.-มิ.ย., Q3 ก.ค.-ก.ย., Q4 ต.ค.-ธ.ค.
-const CALENDAR_QUARTER_MONTHS: Record<number, number[]> = {
-  1: [1, 2, 3],
-  2: [4, 5, 6],
-  3: [7, 8, 9],
-  4: [10, 11, 12],
-};
-
-const calendarQuarterOf = (month: number) => Math.ceil(month / 3);
 
 type ViewMode = "monthly" | "quarterly";
 
@@ -95,7 +85,7 @@ export default function PeriodicReportPage() {
   const quarterlyTotals = useMemo(() => {
     const totals = new Map<number, PeriodTotals>();
     [1, 2, 3, 4].forEach((q) => {
-      const months = CALENDAR_QUARTER_MONTHS[q];
+      const months = QUARTER_MONTHS[q];
       const monthNames = months.map((m) => monthLabel(m).slice(0, 3)).join(" – ");
       totals.set(q, emptyTotals(`ไตรมาส ${q} (${monthNames})`));
     });
@@ -104,7 +94,7 @@ export default function PeriodicReportPage() {
       const acc = d.account ?? accountsById.get(d.accountId);
       if (!acc) return;
       const cat = categoryOfAccount(acc.id, accountsById);
-      const t = totals.get(calendarQuarterOf(d.month));
+      const t = totals.get(quarterOf(d.month));
       if (!t) return;
       const spent = Number(d.spentAmount);
       const budget = Number(d.budgetAmount);
