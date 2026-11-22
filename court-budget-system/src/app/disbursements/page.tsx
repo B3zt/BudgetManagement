@@ -36,7 +36,8 @@ export default function DisbursementsEntryPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [search, setSearch] = useState("");
   const [entries, setEntries] = useState<Record<string, DisbursementEntry[]>>({});
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [openId, setOpenId] = useState<string>(""); // บัญชีที่เลือกในแผงเพิ่มรายการเบิกจ่าย
   const [form, setForm] = useState<EntryForm>(emptyForm());
   const [entrySaving, setEntrySaving] = useState(false);
 
@@ -83,7 +84,6 @@ export default function DisbursementsEntryPage() {
       (grouped[e.accountId] ??= []).push(e);
     });
     setEntries(grouped);
-    setOpenId(null);
     setForm(emptyForm());
   };
 
@@ -99,10 +99,13 @@ export default function DisbursementsEntryPage() {
     });
   };
 
-  const toggleEntries = (id: string) => {
+  const openPanel = (id?: string) => {
     setForm(emptyForm());
-    setOpenId((cur) => (cur === id ? null : id));
+    if (id !== undefined) setOpenId(id);
+    setPanelOpen(true);
   };
+
+  const leafAccounts = useMemo(() => accounts.filter((a) => !parentIds.has(a.id)).sort(sortByCode), [accounts, parentIds]);
 
   const editEntry = (e: DisbursementEntry) =>
     setForm({
@@ -318,7 +321,7 @@ export default function DisbursementsEntryPage() {
         <h1 className="font-display text-xl text-navy-900">บันทึกข้อมูลเบิกจ่าย</h1>
         <p className="text-sm text-navy-500 mt-0.5">
           กรอกงบประมาณที่ได้รับจัดสรรและยอดเบิกจ่ายจริงแยกตามแหล่งเงิน (เงินงบประมาณ / เงินค่าธรรมเนียมศาล) รายบัญชี ต่อเดือน —
-          กดปุ่ม "+ เพิ่มรายการเบิกจ่าย" ที่บัญชีเพื่อบันทึกทีละรายการ ระบบรวมยอดของเดือนให้อัตโนมัติ (หรือพิมพ์สูตรบวกในช่องยอดโดยตรง เช่น 8879+6480+155)
+          กดปุ่ม "+ เพิ่มรายการเบิกจ่าย" ด้านบนเพื่อเลือกบัญชีและบันทึกทีละรายการ ระบบรวมยอดของเดือนให้อัตโนมัติ (หรือพิมพ์สูตรบวกในช่องยอดโดยตรง เช่น 8879+6480+155)
         </p>
 
         <div className="flex flex-wrap items-end gap-4 mt-4">
@@ -371,9 +374,15 @@ export default function DisbursementsEntryPage() {
             />
           </div>
           <button
+            onClick={() => openPanel()}
+            className="ml-auto rounded border border-navy-900 text-navy-900 text-sm font-medium px-4 py-2.5 hover:bg-navy-50"
+          >
+            + เพิ่มรายการเบิกจ่าย
+          </button>
+          <button
             onClick={saveAllDirty}
             disabled={dirtyCount === 0}
-            className="ml-auto rounded bg-navy-900 text-white text-sm font-medium px-4 py-2.5 hover:bg-navy-700 disabled:opacity-40"
+            className="rounded bg-navy-900 text-white text-sm font-medium px-4 py-2.5 hover:bg-navy-700 disabled:opacity-40"
           >
             บันทึกที่แก้ไขทั้งหมด {dirtyCount > 0 && `(${dirtyCount})`}
           </button>
@@ -382,6 +391,132 @@ export default function DisbursementsEntryPage() {
 
       <div className="px-8 py-6">
         {loading && <p className="text-sm text-navy-300">กำลังโหลด...</p>}
+        {panelOpen && (
+          <div className="bg-white rounded-md border border-brass-500 p-4 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-navy-900">
+                เพิ่มรายการเบิกจ่าย — {THAI_MONTHS.find((m) => m.value === month)?.label} {fiscalYear}
+              </p>
+              <button onClick={() => setPanelOpen(false)} className="text-sm text-navy-500 hover:text-navy-900">
+                ปิด
+              </button>
+            </div>
+            <div className="mb-3">
+              <label className="block text-xs text-navy-500 mb-1">บัญชี</label>
+              <select
+                value={openId}
+                onChange={(e) => {
+                  setOpenId(e.target.value);
+                  setForm(emptyForm());
+                }}
+                className="w-full max-w-3xl text-sm rounded border border-line px-2 py-1.5"
+              >
+                <option value="">— เลือกบัญชี —</option>
+                {leafAccounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.code} {a.nameOffice}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {openId ? (
+              <>
+              {(entries[openId] ?? []).length > 0 && (
+                <table className="w-full max-w-3xl text-xs mb-3">
+                  <thead>
+                    <tr className="text-navy-500 text-left">
+                      <th className="py-1 pr-3 font-medium w-24">วันที่</th>
+                      <th className="py-1 pr-3 font-medium">รายละเอียด</th>
+                      <th className="py-1 pr-3 font-medium">แหล่งเงิน</th>
+                      <th className="py-1 pr-3 font-medium text-right">จำนวนเงิน</th>
+                      <th className="w-24"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(entries[openId] ?? []).map((e) => (
+                      <tr key={e.id} className="border-t border-line">
+                        <td className="py-1.5 pr-3">{e.entryDate ? formatThaiShortDate(e.entryDate) : "-"}</td>
+                        <td className="py-1.5 pr-3">{e.description || "-"}</td>
+                        <td className="py-1.5 pr-3">{FUND_SOURCE_LABELS[e.fundSource]}</td>
+                        <td className="py-1.5 pr-3 text-right">{formatBaht(Number(e.amount))}</td>
+                        <td className="py-1.5 text-right whitespace-nowrap">
+                          <button onClick={() => editEntry(e)} className="text-navy-500 hover:text-navy-900 mr-3">
+                            แก้ไข
+                          </button>
+                          <button onClick={() => deleteEntry(openId, e)} className="text-bad hover:underline">
+                            ลบ
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              <div className="flex flex-wrap items-end gap-2">
+                <div>
+                  <label className="block text-xs text-navy-500 mb-1">วันที่</label>
+                  <input
+                    type="date"
+                    value={form.date}
+                    onChange={(e) => setForm({ ...form, date: e.target.value })}
+                    className="text-sm rounded border border-line px-2 py-1.5"
+                  />
+                </div>
+                <div className="flex-1 min-w-[180px]">
+                  <label className="block text-xs text-navy-500 mb-1">รายละเอียด</label>
+                  <input
+                    type="text"
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder="เช่น ค่าไฟฟ้า / เลขที่ฎีกา"
+                    className="w-full text-sm rounded border border-line px-2 py-1.5"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-navy-500 mb-1">แหล่งเงิน</label>
+                  <select
+                    value={form.fundSource}
+                    onChange={(e) => setForm({ ...form, fundSource: e.target.value as FundSource })}
+                    className="text-sm rounded border border-line px-2 py-1.5"
+                  >
+                    {(Object.keys(FUND_SOURCE_LABELS) as FundSource[]).map((k) => (
+                      <option key={k} value={k}>
+                        {FUND_SOURCE_LABELS[k]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-navy-500 mb-1">จำนวนเงิน</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={form.amount}
+                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    onKeyDown={(e) => e.key === "Enter" && submitEntry(openId)}
+                    placeholder="เช่น 1,000+3,400"
+                    className={inputCls(form.amount !== "" && !(form.id ? parseAmount(form.amount) !== null : splitTerms(form.amount) !== null))}
+                  />
+                </div>
+                <button
+                  onClick={() => submitEntry(openId)}
+                  disabled={entrySaving}
+                  className="rounded bg-navy-900 text-white text-sm px-3 py-2 hover:bg-navy-700 disabled:opacity-50"
+                >
+                  {form.id ? "บันทึกการแก้ไข" : "เพิ่มรายการ"}
+                </button>
+                {form.id && (
+                  <button onClick={() => setForm(emptyForm())} className="text-sm text-navy-500 px-2 py-2">
+                    ยกเลิก
+                  </button>
+                )}
+              </div>
+              </>
+            ) : (
+              <p className="text-sm text-navy-300">เลือกบัญชีที่ต้องการเพิ่มรายการเบิกจ่าย</p>
+            )}
+          </div>
+        )}
         {!loading && (
           <div className="bg-white rounded-md border border-line overflow-x-auto">
             <table className="w-full text-sm min-w-[1000px]">
@@ -435,22 +570,8 @@ export default function DisbursementsEntryPage() {
                         <td className="px-4 py-2 text-right border-l border-line">{dash(s.fund)}</td>
                         <td className="px-4 py-2 text-right">{dash(s.courtFee)}</td>
                         <td className="px-4 py-2 text-right">{dash(s.fund + s.courtFee)}</td>
-                        <td className="px-4 py-2 text-right whitespace-nowrap">
-                          <button
-                            onClick={() => toggleEntries(a.id)}
-                            className="text-xs font-medium rounded border border-navy-900 bg-navy-900 text-white px-2.5 py-1.5 hover:bg-navy-700"
-                          >
-                            + เพิ่มรายการเบิกจ่าย
-                          </button>
-                        </td>
+                        <td></td>
                       </tr>
-                      {openId === a.id && (
-                        <tr className="bg-navy-50/40">
-                          <td colSpan={6} className="px-4 py-3 text-sm text-navy-500" style={{ paddingLeft: `${16 + a.level * 18}px` }}>
-                            บัญชีนี้มีรายการย่อย — กดปุ่ม "+ เพิ่มรายการเบิกจ่าย" ที่บรรทัดย่อยด้านล่างที่ต้องการ
-                          </td>
-                        </tr>
-                      )}
                       </Fragment>
                     );
                   }
@@ -458,7 +579,6 @@ export default function DisbursementsEntryPage() {
                   const total = amountOrZero(row.fund) + amountOrZero(row.courtFee);
                   const list = entries[a.id] ?? [];
                   const hasEntries = list.length > 0;
-                  const isOpen = openId === a.id;
                   return (
                     <Fragment key={a.id}>
                     <tr className="border-t border-line">
@@ -501,115 +621,17 @@ export default function DisbursementsEntryPage() {
                           ) : row.saved ? (
                             <span className="text-xs text-good">บันทึกแล้ว</span>
                           ) : null}
-                          <button
-                            onClick={() => toggleEntries(a.id)}
-                            className={`text-xs font-medium rounded border px-2.5 py-1.5 ${
-                              hasEntries
-                                ? "border-brass-500 text-brass-700 bg-brass-50"
-                                : "border-navy-900 bg-navy-900 text-white hover:bg-navy-700"
-                            }`}
-                          >
-                            {hasEntries ? `รายการเบิกจ่าย (${list.length})` : "+ เพิ่มรายการเบิกจ่าย"}
-                          </button>
+                          {hasEntries && (
+                            <button
+                              onClick={() => openPanel(a.id)}
+                              className="text-xs font-medium rounded border border-brass-500 text-brass-700 bg-brass-50 px-2.5 py-1.5"
+                            >
+                              รายการเบิกจ่าย ({list.length})
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
-                    {isOpen && (
-                      <tr className="bg-navy-50/40">
-                        <td colSpan={6} className="px-4 py-3" style={{ paddingLeft: `${16 + a.level * 18}px` }}>
-                          {list.length > 0 && (
-                            <table className="w-full max-w-3xl text-xs mb-3">
-                              <thead>
-                                <tr className="text-navy-500 text-left">
-                                  <th className="py-1 pr-3 font-medium w-24">วันที่</th>
-                                  <th className="py-1 pr-3 font-medium">รายละเอียด</th>
-                                  <th className="py-1 pr-3 font-medium">แหล่งเงิน</th>
-                                  <th className="py-1 pr-3 font-medium text-right">จำนวนเงิน</th>
-                                  <th className="w-24"></th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {list.map((e) => (
-                                  <tr key={e.id} className="border-t border-line">
-                                    <td className="py-1.5 pr-3">{e.entryDate ? formatThaiShortDate(e.entryDate) : "-"}</td>
-                                    <td className="py-1.5 pr-3">{e.description || "-"}</td>
-                                    <td className="py-1.5 pr-3">{FUND_SOURCE_LABELS[e.fundSource]}</td>
-                                    <td className="py-1.5 pr-3 text-right">{formatBaht(Number(e.amount))}</td>
-                                    <td className="py-1.5 text-right whitespace-nowrap">
-                                      <button onClick={() => editEntry(e)} className="text-navy-500 hover:text-navy-900 mr-3">
-                                        แก้ไข
-                                      </button>
-                                      <button onClick={() => deleteEntry(a.id, e)} className="text-bad hover:underline">
-                                        ลบ
-                                      </button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          )}
-                          <div className="flex flex-wrap items-end gap-2">
-                            <div>
-                              <label className="block text-xs text-navy-500 mb-1">วันที่</label>
-                              <input
-                                type="date"
-                                value={form.date}
-                                onChange={(e) => setForm({ ...form, date: e.target.value })}
-                                className="text-sm rounded border border-line px-2 py-1.5"
-                              />
-                            </div>
-                            <div className="flex-1 min-w-[180px]">
-                              <label className="block text-xs text-navy-500 mb-1">รายละเอียด</label>
-                              <input
-                                type="text"
-                                value={form.description}
-                                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                                placeholder="เช่น ค่าไฟฟ้า / เลขที่ฎีกา"
-                                className="w-full text-sm rounded border border-line px-2 py-1.5"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs text-navy-500 mb-1">แหล่งเงิน</label>
-                              <select
-                                value={form.fundSource}
-                                onChange={(e) => setForm({ ...form, fundSource: e.target.value as FundSource })}
-                                className="text-sm rounded border border-line px-2 py-1.5"
-                              >
-                                {(Object.keys(FUND_SOURCE_LABELS) as FundSource[]).map((k) => (
-                                  <option key={k} value={k}>
-                                    {FUND_SOURCE_LABELS[k]}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="block text-xs text-navy-500 mb-1">จำนวนเงิน</label>
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                value={form.amount}
-                                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                                onKeyDown={(e) => e.key === "Enter" && submitEntry(a.id)}
-                                placeholder="เช่น 1,000+3,400"
-                                className={inputCls(form.amount !== "" && !(form.id ? parseAmount(form.amount) !== null : splitTerms(form.amount) !== null))}
-                              />
-                            </div>
-                            <button
-                              onClick={() => submitEntry(a.id)}
-                              disabled={entrySaving}
-                              className="rounded bg-navy-900 text-white text-sm px-3 py-2 hover:bg-navy-700 disabled:opacity-50"
-                            >
-                              {form.id ? "บันทึกการแก้ไข" : "เพิ่มรายการ"}
-                            </button>
-                            {form.id && (
-                              <button onClick={() => setForm(emptyForm())} className="text-sm text-navy-500 px-2 py-2">
-                                ยกเลิก
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
                     </Fragment>
                   );
                 })}
