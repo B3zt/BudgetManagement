@@ -63,6 +63,17 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     );
   }
 
+  // ป้องกันการลบบัญชีที่มีข้อมูลเบิกจ่าย (ไม่เช่นนั้นข้อมูลเบิกจ่ายและรายการเบิกจ่ายจะถูกลบตามไปด้วย)
+  const used =
+    (await prisma.disbursement.count({ where: { accountId: params.id } })) +
+    (await prisma.disbursementEntry.count({ where: { accountId: params.id } }));
+  if (used > 0) {
+    return NextResponse.json(
+      { error: "ไม่สามารถลบได้ เนื่องจากบัญชีนี้มีข้อมูลเบิกจ่ายอยู่ (ให้ปิดการใช้งานแทน)" },
+      { status: 409 }
+    );
+  }
+
   await prisma.chartOfAccount.delete({ where: { id: params.id } });
   return NextResponse.json({ success: true });
 }

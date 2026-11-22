@@ -4,9 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ChartOfAccount, Disbursement } from "@/lib/types";
 import { sortByCode } from "@/lib/accountUtils";
 import {
-  FISCAL_QUARTER_MONTHS,
   THAI_MONTHS,
-  currentThaiFiscalYear,
   formatBaht,
   formatThaiLongDate,
   monthLabel,
@@ -19,10 +17,19 @@ const DEFAULT_ACTIVITY = "กิจกรรมสนับสนุนการ
 
 const dash = (n: number) => (n === 0 ? "-" : formatBaht(n));
 
-// period: "ALL" | "Q1".."Q4" (ไตรมาสปีงบประมาณ ต.ค.-ธ.ค. = Q1) | "M<เดือน>"
+// รายงานนี้นับตามปีปฏิทิน (ม.ค. - ธ.ค.) เหมือนรายงานรายเดือน/รายไตรมาส
+// ไตรมาส: Q1 ม.ค.-มี.ค., Q2 เม.ย.-มิ.ย., Q3 ก.ค.-ก.ย., Q4 ต.ค.-ธ.ค.
+const CALENDAR_QUARTER_MONTHS: Record<number, number[]> = {
+  1: [1, 2, 3],
+  2: [4, 5, 6],
+  3: [7, 8, 9],
+  4: [10, 11, 12],
+};
+
+// period: "ALL" | "Q1".."Q4" | "M<เดือน>"
 function monthsOfPeriod(period: string): number[] {
   if (period === "ALL") return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-  if (period.startsWith("Q")) return FISCAL_QUARTER_MONTHS[Number(period.slice(1))] ?? [];
+  if (period.startsWith("Q")) return CALENDAR_QUARTER_MONTHS[Number(period.slice(1))] ?? [];
   if (period.startsWith("M")) return [Number(period.slice(1))];
   return [];
 }
@@ -30,7 +37,8 @@ function monthsOfPeriod(period: string): number[] {
 export default function FundReportPage() {
   const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [disbursements, setDisbursements] = useState<Disbursement[]>([]);
-  const [fiscalYear, setFiscalYear] = useState(currentThaiFiscalYear());
+  // ปี พ.ศ. ตามปีปฏิทิน (ม.ค. - ธ.ค.)
+  const [year, setYear] = useState(new Date().getFullYear() + 543);
   const [period, setPeriod] = useState("Q1");
   const [activity, setActivity] = useState(DEFAULT_ACTIVITY);
   const [office, setOffice] = useState("สำนักงานประจำศาลจังหวัดกบินทร์บุรี");
@@ -64,11 +72,18 @@ export default function FundReportPage() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/disbursements?fiscalYear=${fiscalYear}`)
-      .then((r) => r.json())
-      .then((json) => setDisbursements(json.data ?? []))
+    // ข้อมูลเก็บตามปีงบประมาณ (ต.ค. - ก.ย.): ม.ค. - ก.ย. ของปี Y อยู่ในปีงบประมาณ Y, ต.ค. - ธ.ค. ของปี Y อยู่ในปีงบประมาณ Y+1
+    Promise.all([
+      fetch(`/api/disbursements?fiscalYear=${year}`).then((r) => r.json()),
+      fetch(`/api/disbursements?fiscalYear=${year + 1}`).then((r) => r.json()),
+    ])
+      .then(([a, b]) => {
+        const janToSep: Disbursement[] = (a.data ?? []).filter((d: Disbursement) => d.month <= 9);
+        const octToDec: Disbursement[] = (b.data ?? []).filter((d: Disbursement) => d.month >= 10);
+        setDisbursements([...janToSep, ...octToDec]);
+      })
       .finally(() => setLoading(false));
-  }, [fiscalYear]);
+  }, [year]);
 
   const accountsById = useMemo(() => {
     const m = new Map<string, ChartOfAccount>();
@@ -136,9 +151,15 @@ export default function FundReportPage() {
   }, [accounts, sums, hideEmpty]);
 
   const periodTitle = (() => {
-    if (period === "ALL") return `ประจำปีงบประมาณ พ.ศ.${fiscalYear}`;
-    if (period.startsWith("Q")) return `ประจำปีงบประมาณ พ.ศ.${fiscalYear} ไตรมาสที่ ${period.slice(1)}`;
-    return `ประจำปีงบประมาณ พ.ศ.${fiscalYear} เดือน${monthLabel(Number(period.slice(1)))}`;
+    if (period === "ALL") return `ประจำปี พ.ศ.${year} (มกราคม - ธันวาคม)`;
+    if (period.startsWith("Q")) return `ประจำปี พ.ศ.${year} ไตรมาสที่ ${period.slice(1)}`;
+    return `ประจำปี พ.ศ.${year} เดือน${monthLabel(Number(period.slice(1)))}`;
+  })();
+
+  // ปีงบประมาณของเงินที่ครอบคลุมในช่วงที่เลือก (ต.ค. - ธ.ค. นับเป็นปีงบประมาณถัดไป)
+  const fundYearLabel = (() => {
+    const ys = Array.from(new Set(monthsOfPeriod(period).map((m) => (m >= 10 ? year + 1 : year)))).sort();
+    return ys.join(" และ ");
   })();
 
   const cell = "border border-navy-500 px-3 py-1.5";
@@ -153,11 +174,11 @@ export default function FundReportPage() {
 
         <div className="flex flex-wrap items-end gap-4 mt-4">
           <div>
-            <label className="block text-xs font-medium text-navy-500 mb-1">ปีงบประมาณ (พ.ศ.)</label>
+            <label className="block text-xs font-medium text-navy-500 mb-1">ปี (พ.ศ.) ม.ค. - ธ.ค.</label>
             <input
               type="number"
-              value={fiscalYear}
-              onChange={(e) => setFiscalYear(Number(e.target.value))}
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
               className="w-28 text-sm rounded border border-line px-3 py-2 focus:outline-none focus:ring-1 focus:ring-brass-500"
             />
           </div>
@@ -168,10 +189,10 @@ export default function FundReportPage() {
               onChange={(e) => setPeriod(e.target.value)}
               className="text-sm rounded border border-line px-3 py-2 focus:outline-none focus:ring-1 focus:ring-brass-500"
             >
-              <option value="ALL">ทั้งปีงบประมาณ</option>
+              <option value="ALL">ทั้งปี (ม.ค. - ธ.ค.)</option>
               {[1, 2, 3, 4].map((q) => (
                 <option key={q} value={`Q${q}`}>
-                  ไตรมาสที่ {q} ({FISCAL_QUARTER_MONTHS[q].map((m) => monthLabel(m).slice(0, 3)).join(" – ")})
+                  ไตรมาสที่ {q} ({CALENDAR_QUARTER_MONTHS[q].map((m) => monthLabel(m).slice(0, 3)).join(" – ")})
                 </option>
               ))}
               {THAI_MONTHS.map((m) => (
@@ -219,7 +240,7 @@ export default function FundReportPage() {
               รายงานผลการเบิกจ่าย {periodTitle}
             </p>
             {activity.trim() && <p className="font-medium">{activity}</p>}
-            <p className="font-medium">แหล่งเงิน ทุกแหล่งเงิน (เงินปีงบประมาณ {fiscalYear})</p>
+            <p className="font-medium">แหล่งเงิน ทุกแหล่งเงิน (เงินปีงบประมาณ {fundYearLabel})</p>
             {office.trim() && <p className="font-semibold mt-2">{office}</p>}
           </div>
 
