@@ -4,13 +4,13 @@ import { FUND_SOURCES, recomputeDisbursement } from "@/lib/disbursementEntries";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/disbursement-entries?fiscalYear=2569&month=10[&itemId=...]
+// GET /api/disbursement-entries?fiscalYear=2569&month=10[&accountId=...]
 export async function GET(req: NextRequest) {
   const db = getDb();
   const { searchParams } = new URL(req.url);
   const fiscalYear = searchParams.get("fiscalYear");
   const month = searchParams.get("month");
-  const itemId = searchParams.get("itemId");
+  const accountId = searchParams.get("accountId");
 
   if (!fiscalYear) {
     return NextResponse.json({ error: "กรุณาระบุปีงบประมาณ (fiscalYear)" }, { status: 400 });
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     .where({
       fiscalYear: Number(fiscalYear),
       ...(month ? { month: Number(month) } : {}),
-      ...(itemId ? { itemId } : {}),
+      ...(accountId ? { accountId } : {}),
     })
     .orderBy((m) => m.entryDate.asc())
     .orderBy((m) => m.createdAt.asc())
@@ -32,10 +32,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const db = getDb();
   const body = await req.json();
-  const { itemId, fiscalYear, month, entryDate, description, fundSource, amount } = body;
+  const { accountId, fiscalYear, month, entryDate, description, fundSource, amount } = body;
 
-  if (!itemId || !fiscalYear || !month) {
-    return NextResponse.json({ error: "ข้อมูลไม่ครบถ้วน (itemId, fiscalYear, month)" }, { status: 400 });
+  if (!accountId || !fiscalYear || !month) {
+    return NextResponse.json({ error: "ข้อมูลไม่ครบถ้วน (accountId, fiscalYear, month)" }, { status: 400 });
   }
   if (Number(month) < 1 || Number(month) > 12) {
     return NextResponse.json({ error: "เดือนไม่ถูกต้อง" }, { status: 400 });
@@ -51,22 +51,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "วันที่ไม่ถูกต้อง" }, { status: 400 });
   }
 
-  const item = await db.orm.public.DisbursementItem.first({ id: itemId });
-  if (!item) {
-    return NextResponse.json({ error: "ไม่พบรายการนี้" }, { status: 404 });
+  const account = await db.orm.public.ChartOfAccount.first({ id: accountId });
+  if (!account) {
+    return NextResponse.json({ error: "ไม่พบรายการบัญชีนี้" }, { status: 404 });
   }
-  const childCount = await db.orm.public.DisbursementItem
-    .where({ parentId: itemId })
+  const childCount = await db.orm.public.ChartOfAccount
+    .where({ parentId: accountId })
     .aggregate((a) => ({ total: a.count() }));
   if (childCount.total > 0) {
     return NextResponse.json(
-      { error: "รายการนี้มีรายการย่อย ให้เพิ่มรายการเบิกจ่ายที่รายการปลายทางแทน" },
+      { error: "บัญชีนี้มีรายการย่อย ให้เพิ่มรายการเบิกจ่ายที่บัญชีปลายทางแทน" },
       { status: 400 }
     );
   }
 
   const created = await db.orm.public.DisbursementEntry.create({
-    itemId,
+    accountId,
     fiscalYear: Number(fiscalYear),
     month: Number(month),
     entryDate: entryDate ? new Date(entryDate) : null,
@@ -75,6 +75,6 @@ export async function POST(req: NextRequest) {
     amount: amt.toFixed(2),
   });
 
-  const disbursement = await recomputeDisbursement(itemId, Number(fiscalYear), Number(month));
+  const disbursement = await recomputeDisbursement(accountId, Number(fiscalYear), Number(month));
   return NextResponse.json({ data: created, disbursement }, { status: 201 });
 }

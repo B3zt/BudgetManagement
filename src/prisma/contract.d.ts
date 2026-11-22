@@ -23,9 +23,9 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'f30e50ae97df059b31193583735db15265ae49ed6af76d24f243cd290a87bd0d'>;
+  StorageHashBase<'0ce070795edd5fe0e2198bb268ac746c54de88722895165c235bec8117317fbf'>;
 export type ExecutionHash =
-  ExecutionHashBase<'3f5f9b1a7bb48b4f1b3e7738f1ba66e793dbb7e2bb5acb55be506daf41ae03e5'>;
+  ExecutionHashBase<'94ab7145096dddb3f977c90b01a66ea50b942e78cb26f7c5742af321db60fe31'>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
 
@@ -359,25 +359,28 @@ export namespace Models {
     parentId: FieldOutputTypes['public']['ChartOfAccount']['parentId'];
     updatedAt: FieldOutputTypes['public']['ChartOfAccount']['updatedAt'];
     children: public_ChartOfAccount[];
+    disbursementEntries: public_DisbursementEntry[];
+    disbursements: public_Disbursement[];
     parent: public_ChartOfAccount | null;
-    readonly [RelationKeys]?: 'children' | 'parent';
+    readonly [RelationKeys]?: 'children' | 'disbursementEntries' | 'disbursements' | 'parent';
   };
   export type public_Disbursement = {
+    accountId: FieldOutputTypes['public']['Disbursement']['accountId'];
     budgetAmount: FieldOutputTypes['public']['Disbursement']['budgetAmount'];
     createdAt: FieldOutputTypes['public']['Disbursement']['createdAt'];
     fiscalYear: FieldOutputTypes['public']['Disbursement']['fiscalYear'];
     id: FieldOutputTypes['public']['Disbursement']['id'];
-    itemId: FieldOutputTypes['public']['Disbursement']['itemId'];
     month: FieldOutputTypes['public']['Disbursement']['month'];
     note: FieldOutputTypes['public']['Disbursement']['note'];
     spentAmount: FieldOutputTypes['public']['Disbursement']['spentAmount'];
     spentBudgetFund: FieldOutputTypes['public']['Disbursement']['spentBudgetFund'];
     spentCourtFee: FieldOutputTypes['public']['Disbursement']['spentCourtFee'];
     updatedAt: FieldOutputTypes['public']['Disbursement']['updatedAt'];
-    item: public_DisbursementItem;
-    readonly [RelationKeys]?: 'item';
+    account: public_ChartOfAccount;
+    readonly [RelationKeys]?: 'account';
   };
   export type public_DisbursementEntry = {
+    accountId: FieldOutputTypes['public']['DisbursementEntry']['accountId'];
     amount: FieldOutputTypes['public']['DisbursementEntry']['amount'];
     createdAt: FieldOutputTypes['public']['DisbursementEntry']['createdAt'];
     description: FieldOutputTypes['public']['DisbursementEntry']['description'];
@@ -385,26 +388,9 @@ export namespace Models {
     fiscalYear: FieldOutputTypes['public']['DisbursementEntry']['fiscalYear'];
     fundSource: FieldOutputTypes['public']['DisbursementEntry']['fundSource'];
     id: FieldOutputTypes['public']['DisbursementEntry']['id'];
-    itemId: FieldOutputTypes['public']['DisbursementEntry']['itemId'];
     month: FieldOutputTypes['public']['DisbursementEntry']['month'];
-    item: public_DisbursementItem;
-    readonly [RelationKeys]?: 'item';
-  };
-  export type public_DisbursementItem = {
-    code: FieldOutputTypes['public']['DisbursementItem']['code'];
-    createdAt: FieldOutputTypes['public']['DisbursementItem']['createdAt'];
-    id: FieldOutputTypes['public']['DisbursementItem']['id'];
-    isActive: FieldOutputTypes['public']['DisbursementItem']['isActive'];
-    level: FieldOutputTypes['public']['DisbursementItem']['level'];
-    name: FieldOutputTypes['public']['DisbursementItem']['name'];
-    note: FieldOutputTypes['public']['DisbursementItem']['note'];
-    parentId: FieldOutputTypes['public']['DisbursementItem']['parentId'];
-    updatedAt: FieldOutputTypes['public']['DisbursementItem']['updatedAt'];
-    children: public_DisbursementItem[];
-    disbursementEntries: public_DisbursementEntry[];
-    disbursements: public_Disbursement[];
-    parent: public_DisbursementItem | null;
-    readonly [RelationKeys]?: 'children' | 'disbursementEntries' | 'disbursements' | 'parent';
+    account: public_ChartOfAccount;
+    readonly [RelationKeys]?: 'account';
   };
   export type public_GfmisAccount = {
     code: FieldOutputTypes['public']['GfmisAccount']['code'];
@@ -433,7 +419,6 @@ export declare const models: {
     ChartOfAccount: Models.public_ChartOfAccount;
     Disbursement: Models.public_Disbursement;
     DisbursementEntry: Models.public_DisbursementEntry;
-    DisbursementItem: Models.public_DisbursementItem;
     GfmisAccount: Models.public_GfmisAccount;
     TransferItem: Models.public_TransferItem;
   };
@@ -670,6 +655,12 @@ type ContractBase = Omit<
             };
             readonly Disbursement: {
               columns: {
+                readonly accountId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
                 readonly budgetAmount: {
                   readonly dataType: 'pg/numeric';
                   readonly codecId: 'pg/numeric@1';
@@ -692,12 +683,6 @@ type ContractBase = Omit<
                   readonly many: false;
                 };
                 readonly id: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly itemId: {
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
                   readonly nullable: false;
@@ -756,14 +741,14 @@ type ContractBase = Omit<
               uniques: readonly [];
               indexes: readonly [
                 {
+                  readonly name: 'Disbursement_accountId_fiscalYear_month_key';
+                  readonly columns: readonly ['accountId', 'fiscalYear', 'month'];
+                  readonly unique: true;
+                },
+                {
                   readonly name: 'Disbursement_fiscalYear_month_idx';
                   readonly columns: readonly ['fiscalYear', 'month'];
                   readonly unique: false;
-                },
-                {
-                  readonly name: 'Disbursement_itemId_fiscalYear_month_key';
-                  readonly columns: readonly ['itemId', 'fiscalYear', 'month'];
-                  readonly unique: true;
                 },
               ];
               foreignKeys: readonly [
@@ -771,11 +756,11 @@ type ContractBase = Omit<
                   readonly source: {
                     readonly namespaceId: 'public' & NamespaceId;
                     readonly tableName: 'Disbursement';
-                    readonly columns: readonly ['itemId'];
+                    readonly columns: readonly ['accountId'];
                   };
                   readonly target: {
                     readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'DisbursementItem';
+                    readonly tableName: 'ChartOfAccount';
                     readonly columns: readonly ['id'];
                   };
                 },
@@ -783,6 +768,12 @@ type ContractBase = Omit<
             };
             readonly DisbursementEntry: {
               columns: {
+                readonly accountId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
                 readonly amount: {
                   readonly dataType: 'pg/numeric';
                   readonly codecId: 'pg/numeric@1';
@@ -834,12 +825,6 @@ type ContractBase = Omit<
                   readonly nullable: false;
                   readonly many: false;
                 };
-                readonly itemId: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
                 readonly month: {
                   readonly dataType: 'pg/int4';
                   readonly codecId: 'pg/int4@1';
@@ -851,13 +836,13 @@ type ContractBase = Omit<
               uniques: readonly [];
               indexes: readonly [
                 {
-                  readonly name: 'DisbursementEntry_fiscalYear_month_idx';
-                  readonly columns: readonly ['fiscalYear', 'month'];
+                  readonly name: 'DisbursementEntry_accountId_fiscalYear_month_idx';
+                  readonly columns: readonly ['accountId', 'fiscalYear', 'month'];
                   readonly unique: false;
                 },
                 {
-                  readonly name: 'DisbursementEntry_itemId_fiscalYear_month_idx';
-                  readonly columns: readonly ['itemId', 'fiscalYear', 'month'];
+                  readonly name: 'DisbursementEntry_fiscalYear_month_idx';
+                  readonly columns: readonly ['fiscalYear', 'month'];
                   readonly unique: false;
                 },
               ];
@@ -866,104 +851,11 @@ type ContractBase = Omit<
                   readonly source: {
                     readonly namespaceId: 'public' & NamespaceId;
                     readonly tableName: 'DisbursementEntry';
-                    readonly columns: readonly ['itemId'];
+                    readonly columns: readonly ['accountId'];
                   };
                   readonly target: {
                     readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'DisbursementItem';
-                    readonly columns: readonly ['id'];
-                  };
-                },
-              ];
-            };
-            readonly DisbursementItem: {
-              columns: {
-                readonly code: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly createdAt: {
-                  readonly dataType: 'pg/timestamp';
-                  readonly codecId: 'pg/timestamp-date@1';
-                  readonly nullable: false;
-                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
-                  readonly typeParams: { readonly precision: 3 };
-                  readonly many: false;
-                };
-                readonly id: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly isActive: {
-                  readonly dataType: 'pg/bool';
-                  readonly codecId: 'pg/bool@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
-                  };
-                  readonly many: false;
-                };
-                readonly level: {
-                  readonly dataType: 'pg/int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly name: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly many: false;
-                };
-                readonly note: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly parentId: {
-                  readonly dataType: 'pg/text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                  readonly many: false;
-                };
-                readonly updatedAt: {
-                  readonly dataType: 'pg/timestamp';
-                  readonly codecId: 'pg/timestamp-date@1';
-                  readonly nullable: false;
-                  readonly typeParams: { readonly precision: 3 };
-                  readonly many: false;
-                };
-              };
-              primaryKey: { readonly columns: readonly ['id'] };
-              uniques: readonly [];
-              indexes: readonly [
-                {
-                  readonly name: 'DisbursementItem_code_key';
-                  readonly columns: readonly ['code'];
-                  readonly unique: true;
-                },
-                {
-                  readonly name: 'DisbursementItem_parentId_idx';
-                  readonly columns: readonly ['parentId'];
-                  readonly unique: false;
-                },
-              ];
-              foreignKeys: readonly [
-                {
-                  readonly source: {
-                    readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'DisbursementItem';
-                    readonly columns: readonly ['parentId'];
-                  };
-                  readonly target: {
-                    readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'DisbursementItem';
+                    readonly tableName: 'ChartOfAccount';
                     readonly columns: readonly ['id'];
                   };
                 },
@@ -1136,10 +1028,6 @@ type ContractBase = Omit<
     readonly DisbursementEntry: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'DisbursementEntry';
-    };
-    readonly DisbursementItem: {
-      readonly namespace: 'public' & NamespaceId;
-      readonly model: 'DisbursementItem';
     };
     readonly GfmisAccount: {
       readonly namespace: 'public' & NamespaceId;
@@ -1321,6 +1209,28 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['parentId'];
                 };
               };
+              readonly disbursementEntries: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'DisbursementEntry';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['accountId'];
+                };
+              };
+              readonly disbursements: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Disbursement';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['accountId'];
+                };
+              };
               readonly parent: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -1354,6 +1264,10 @@ type ContractBase = Omit<
           };
           readonly Disbursement: {
             readonly fields: {
+              readonly accountId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
               readonly budgetAmount: {
                 readonly nullable: false;
                 readonly type: {
@@ -1375,10 +1289,6 @@ type ContractBase = Omit<
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
               };
               readonly id: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly itemId: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
@@ -1424,15 +1334,15 @@ type ContractBase = Omit<
               };
             };
             readonly relations: {
-              readonly item: {
+              readonly account: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'DisbursementItem';
+                  readonly model: 'ChartOfAccount';
                 };
                 readonly cardinality: 'N:1';
                 readonly nullable: false;
                 readonly on: {
-                  readonly localFields: readonly ['itemId'];
+                  readonly localFields: readonly ['accountId'];
                   readonly targetFields: readonly ['id'];
                 };
               };
@@ -1441,11 +1351,11 @@ type ContractBase = Omit<
               readonly table: 'Disbursement';
               readonly namespaceId: 'public';
               readonly fields: {
+                readonly accountId: { readonly column: 'accountId' };
                 readonly budgetAmount: { readonly column: 'budgetAmount' };
                 readonly createdAt: { readonly column: 'createdAt' };
                 readonly fiscalYear: { readonly column: 'fiscalYear' };
                 readonly id: { readonly column: 'id' };
-                readonly itemId: { readonly column: 'itemId' };
                 readonly month: { readonly column: 'month' };
                 readonly note: { readonly column: 'note' };
                 readonly spentAmount: { readonly column: 'spentAmount' };
@@ -1457,6 +1367,10 @@ type ContractBase = Omit<
           };
           readonly DisbursementEntry: {
             readonly fields: {
+              readonly accountId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
               readonly amount: {
                 readonly nullable: false;
                 readonly type: {
@@ -1501,25 +1415,21 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
-              readonly itemId: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
               readonly month: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
               };
             };
             readonly relations: {
-              readonly item: {
+              readonly account: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'DisbursementItem';
+                  readonly model: 'ChartOfAccount';
                 };
                 readonly cardinality: 'N:1';
                 readonly nullable: false;
                 readonly on: {
-                  readonly localFields: readonly ['itemId'];
+                  readonly localFields: readonly ['accountId'];
                   readonly targetFields: readonly ['id'];
                 };
               };
@@ -1528,6 +1438,7 @@ type ContractBase = Omit<
               readonly table: 'DisbursementEntry';
               readonly namespaceId: 'public';
               readonly fields: {
+                readonly accountId: { readonly column: 'accountId' };
                 readonly amount: { readonly column: 'amount' };
                 readonly createdAt: { readonly column: 'createdAt' };
                 readonly description: { readonly column: 'description' };
@@ -1535,118 +1446,7 @@ type ContractBase = Omit<
                 readonly fiscalYear: { readonly column: 'fiscalYear' };
                 readonly fundSource: { readonly column: 'fundSource' };
                 readonly id: { readonly column: 'id' };
-                readonly itemId: { readonly column: 'itemId' };
                 readonly month: { readonly column: 'month' };
-              };
-            };
-          };
-          readonly DisbursementItem: {
-            readonly fields: {
-              readonly code: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly createdAt: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamp-date@1';
-                  readonly typeParams: { readonly precision: 3 };
-                };
-              };
-              readonly id: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly isActive: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
-              };
-              readonly level: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
-              };
-              readonly name: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly note: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly parentId: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly updatedAt: {
-                readonly nullable: false;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamp-date@1';
-                  readonly typeParams: { readonly precision: 3 };
-                };
-              };
-            };
-            readonly relations: {
-              readonly children: {
-                readonly to: {
-                  readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'DisbursementItem';
-                };
-                readonly cardinality: '1:N';
-                readonly on: {
-                  readonly localFields: readonly ['id'];
-                  readonly targetFields: readonly ['parentId'];
-                };
-              };
-              readonly disbursementEntries: {
-                readonly to: {
-                  readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'DisbursementEntry';
-                };
-                readonly cardinality: '1:N';
-                readonly on: {
-                  readonly localFields: readonly ['id'];
-                  readonly targetFields: readonly ['itemId'];
-                };
-              };
-              readonly disbursements: {
-                readonly to: {
-                  readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'Disbursement';
-                };
-                readonly cardinality: '1:N';
-                readonly on: {
-                  readonly localFields: readonly ['id'];
-                  readonly targetFields: readonly ['itemId'];
-                };
-              };
-              readonly parent: {
-                readonly to: {
-                  readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'DisbursementItem';
-                };
-                readonly cardinality: 'N:1';
-                readonly nullable: true;
-                readonly on: {
-                  readonly localFields: readonly ['parentId'];
-                  readonly targetFields: readonly ['id'];
-                };
-              };
-            };
-            readonly storage: {
-              readonly table: 'DisbursementItem';
-              readonly namespaceId: 'public';
-              readonly fields: {
-                readonly code: { readonly column: 'code' };
-                readonly createdAt: { readonly column: 'createdAt' };
-                readonly id: { readonly column: 'id' };
-                readonly isActive: { readonly column: 'isActive' };
-                readonly level: { readonly column: 'level' };
-                readonly name: { readonly column: 'name' };
-                readonly note: { readonly column: 'note' };
-                readonly parentId: { readonly column: 'parentId' };
-                readonly updatedAt: { readonly column: 'updatedAt' };
               };
             };
           };
@@ -1909,43 +1709,6 @@ type ContractBase = Omit<
           readonly ref: {
             readonly entry: 'DisbursementEntry';
             readonly field: 'id';
-            readonly namespace: 'public';
-          };
-        },
-        {
-          readonly onCreate: {
-            readonly id: 'timestampNow';
-            readonly kind: 'generator';
-            readonly params: { readonly precision: 3 };
-          };
-          readonly ref: {
-            readonly entry: 'DisbursementItem';
-            readonly field: 'createdAt';
-            readonly namespace: 'public';
-          };
-        },
-        {
-          readonly onCreate: { readonly id: 'cuid2'; readonly kind: 'generator' };
-          readonly ref: {
-            readonly entry: 'DisbursementItem';
-            readonly field: 'id';
-            readonly namespace: 'public';
-          };
-        },
-        {
-          readonly onCreate: {
-            readonly id: 'timestampNow';
-            readonly kind: 'generator';
-            readonly params: { readonly precision: 3 };
-          };
-          readonly onUpdate: {
-            readonly id: 'timestampNow';
-            readonly kind: 'generator';
-            readonly params: { readonly precision: 3 };
-          };
-          readonly ref: {
-            readonly entry: 'DisbursementItem';
-            readonly field: 'updatedAt';
             readonly namespace: 'public';
           };
         },

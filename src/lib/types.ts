@@ -22,26 +22,13 @@ export interface ChartOfAccount {
   updatedAt: string;
 }
 
-// รายการเบิกจ่าย (แยกจากผังบัญชี) — ใช้ในหน้าบันทึกข้อมูลเบิกจ่ายและรายงาน
-export interface DisbursementItem {
-  id: string;
-  code: string;
-  level: number;
-  name: string;
-  parentId: string | null;
-  isActive: boolean;
-  note: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface AccountNode extends ChartOfAccount {
   children: AccountNode[];
 }
 
 export interface Disbursement {
   id: string;
-  itemId: string;
+  accountId: string;
   fiscalYear: number;
   month: number;
   budgetAmount: string; // Decimal serialized as string over JSON
@@ -51,7 +38,7 @@ export interface Disbursement {
   note: string | null;
   createdAt: string;
   updatedAt: string;
-  item?: DisbursementItem;
+  account?: ChartOfAccount;
 }
 
 export type FundSource = "BUDGET" | "COURT_FEE";
@@ -64,7 +51,7 @@ export const FUND_SOURCE_LABELS: Record<FundSource, string> = {
 // รายการเบิกจ่ายย่อย (หนึ่งบัญชี ต่อเดือน มีได้หลายรายการ)
 export interface DisbursementEntry {
   id: string;
-  itemId: string;
+  accountId: string;
   fiscalYear: number;
   month: number;
   entryDate: string | null;

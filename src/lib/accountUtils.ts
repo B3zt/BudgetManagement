@@ -76,7 +76,7 @@ export function buildTree(flat: ChartOfAccount[]): AccountNode[] {
 // หาหมวดงบประมาณของบัญชี โดยไล่ขึ้นไปหาบัญชีระดับ 1 แล้วแปลงจากรหัส (1→ค่าตอบแทน, 2→ค่าใช้สอย, 3→ค่าวัสดุ, 4→ค่าสาธารณูปโภค)
 export function categoryOfAccount(
   accountId: string,
-  accountsById: Map<string, { id: string; code: string; parentId: string | null }>
+  accountsById: Map<string, ChartOfAccount>
 ): BudgetCategory | null {
   let current = accountsById.get(accountId) ?? null;
   const visited = new Set<string>();

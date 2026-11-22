@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { DisbursementItem, Disbursement, BudgetCategory } from "@/lib/types";
+import type { ChartOfAccount, Disbursement, BudgetCategory } from "@/lib/types";
 import { CATEGORY_LABELS, categoryOfAccount } from "@/lib/accountUtils";
 import { QUARTER_MONTHS, formatBaht, formatPercent, monthLabel, quarterOf } from "@/lib/thai";
 
@@ -27,7 +27,7 @@ const emptyTotals = (label: string): PeriodTotals => ({
 });
 
 export default function PeriodicReportPage() {
-  const [accounts, setAccounts] = useState<DisbursementItem[]>([]);
+  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [disbursements, setDisbursements] = useState<Disbursement[]>([]);
   // ปี พ.ศ. ตามปีปฏิทิน (ม.ค. - ธ.ค.)
   const [year, setYear] = useState(new Date().getFullYear() + 543);
@@ -35,7 +35,7 @@ export default function PeriodicReportPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/disbursement-items")
+    fetch("/api/accounts")
       .then((r) => r.json())
       .then((json) => setAccounts(json.data));
   }, []);
@@ -57,7 +57,7 @@ export default function PeriodicReportPage() {
   }, [year]);
 
   const accountsById = useMemo(() => {
-    const m = new Map<string, DisbursementItem>();
+    const m = new Map<string, ChartOfAccount>();
     accounts.forEach((a) => m.set(a.id, a));
     return m;
   }, [accounts]);
@@ -67,7 +67,7 @@ export default function PeriodicReportPage() {
     CALENDAR_MONTH_ORDER.forEach((m) => totals.set(m, emptyTotals(monthLabel(m))));
 
     disbursements.forEach((d) => {
-      const acc = d.item ?? accountsById.get(d.itemId);
+      const acc = d.account ?? accountsById.get(d.accountId);
       if (!acc) return;
       const cat = categoryOfAccount(acc.id, accountsById);
       const t = totals.get(d.month);
@@ -91,7 +91,7 @@ export default function PeriodicReportPage() {
     });
 
     disbursements.forEach((d) => {
-      const acc = d.item ?? accountsById.get(d.itemId);
+      const acc = d.account ?? accountsById.get(d.accountId);
       if (!acc) return;
       const cat = categoryOfAccount(acc.id, accountsById);
       const t = totals.get(quarterOf(d.month));
