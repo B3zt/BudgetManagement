@@ -113,34 +113,54 @@ export default function DisbursementsEntryPage() {
       amount: String(Number(e.amount)),
     });
 
+  // พิมพ์หลายยอดคั่นด้วย + เช่น 1,000+3,400+1,000 ระบบจะแยกเป็นหลายรายการให้ (ตามที่จดบวกไว้ในใบรายงาน)
+  const splitTerms = (input: string): number[] | null => {
+    const parts = input.split("+").map((t) => t.trim());
+    if (parts.some((t) => t === "")) return null;
+    const nums = parts.map((t) => parseAmount(t));
+    return nums.every((n) => n !== null && n > 0) ? (nums as number[]) : null;
+  };
+
   const submitEntry = async (accountId: string) => {
-    const amt = parseAmount(form.amount);
-    if (amt === null || amt <= 0) {
-      alert("กรุณากรอกจำนวนเงินมากกว่า 0 (พิมพ์ตัวเลข หรือสูตรบวก เช่น 8879+6480)");
+    const terms = form.id ? (() => { const n = parseAmount(form.amount); return n !== null && n > 0 ? [n] : null; })() : splitTerms(form.amount);
+    if (!terms) {
+      alert("กรุณากรอกจำนวนเงินมากกว่า 0 (หลายยอดพิมพ์คั่นด้วย + เช่น 1,000+3,400+1,000)");
       return;
     }
     setEntrySaving(true);
     try {
-      const payload = {
-        entryDate: form.date || null,
-        description: form.description,
-        fundSource: form.fundSource,
-        amount: amt,
-      };
-      const res = await fetch(form.id ? `/api/disbursement-entries/${form.id}` : "/api/disbursement-entries", {
-        method: form.id ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form.id ? payload : { ...payload, accountId, fiscalYear, month }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
-      const saved: DisbursementEntry = json.data;
+      let lastDisbursement: Disbursement | null = null;
+      const created: DisbursementEntry[] = [];
+      let updated: DisbursementEntry | null = null;
+      for (const amt of terms) {
+        const payload = {
+          entryDate: form.date || null,
+          description: form.description,
+          fundSource: form.fundSource,
+          amount: amt,
+        };
+        // eslint-disable-next-line no-await-in-loop
+        const res = await fetch(form.id ? `/api/disbursement-entries/${form.id}` : "/api/disbursement-entries", {
+          method: form.id ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form.id ? payload : { ...payload, accountId, fiscalYear, month }),
+        });
+        // eslint-disable-next-line no-await-in-loop
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error);
+        if (form.id) updated = json.data;
+        else created.push(json.data);
+        lastDisbursement = json.disbursement;
+      }
       setEntries((prev) => {
         const list = prev[accountId] ?? [];
-        return { ...prev, [accountId]: form.id ? list.map((x) => (x.id === saved.id ? saved : x)) : [...list, saved] };
+        return {
+          ...prev,
+          [accountId]: updated ? list.map((x) => (x.id === updated!.id ? updated! : x)) : [...list, ...created],
+        };
       });
-      applyDisbursement(accountId, json.disbursement);
-      setForm(emptyForm());
+      if (lastDisbursement) applyDisbursement(accountId, lastDisbursement);
+      setForm({ ...emptyForm(), date: form.date, fundSource: form.fundSource });
     } catch (err) {
       alert(err instanceof Error && err.message ? err.message : "บันทึกรายการไม่สำเร็จ กรุณาลองใหม่");
     } finally {
@@ -554,7 +574,8 @@ export default function DisbursementsEntryPage() {
                                 value={form.amount}
                                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
                                 onKeyDown={(e) => e.key === "Enter" && submitEntry(a.id)}
-                                className={inputCls(form.amount !== "" && parseAmount(form.amount) === null)}
+                                placeholder="เช่น 1,000+3,400"
+                                className={inputCls(form.amount !== "" && !(form.id ? parseAmount(form.amount) !== null : splitTerms(form.amount) !== null))}
                               />
                             </div>
                             <button
