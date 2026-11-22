@@ -1,0 +1,1119 @@
+[
+  {
+    "id": "schema.public",
+    "label": "Create schema \"public\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create schema \"public\"",
+        "sql": "CREATE SCHEMA IF NOT EXISTS \"public\"",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "createNativeEnumType.FundSource",
+    "label": "Create enum type \"FundSource\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "type",
+        "name": "FundSource"
+      }
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "create enum type \"FundSource\"",
+        "sql": "CREATE TYPE \"public\".\"FundSource\" AS ENUM ('BUDGET', 'COURT_FEE')",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "table.BudgetTransfer",
+    "label": "Create table \"BudgetTransfer\"",
+    "summary": "Creates table \"BudgetTransfer\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "BudgetTransfer"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"BudgetTransfer\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BudgetTransfer\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"BudgetTransfer\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"BudgetTransfer\"",
+        "sql": "CREATE TABLE \"public\".\"BudgetTransfer\" (\n  \"createdAt\" timestamp(3) DEFAULT (now()) NOT NULL,\n  \"documentDate\" timestamp(3) NOT NULL,\n  \"documentNo\" text NOT NULL,\n  \"fiscalYear\" int4 NOT NULL,\n  \"fromUnit\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"month\" int4 NOT NULL,\n  \"preparedBy\" text,\n  \"quarter\" int4 NOT NULL,\n  \"remark\" text,\n  \"toUnit\" text NOT NULL,\n  \"transferDate\" timestamp(3) NOT NULL,\n  \"transferSeq\" int4 NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"BudgetTransfer\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"BudgetTransfer\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"BudgetTransfer\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.ChartOfAccount",
+    "label": "Create table \"ChartOfAccount\"",
+    "summary": "Creates table \"ChartOfAccount\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "ChartOfAccount"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"ChartOfAccount\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ChartOfAccount\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"ChartOfAccount\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"ChartOfAccount\"",
+        "sql": "CREATE TABLE \"public\".\"ChartOfAccount\" (\n  \"code\" text NOT NULL,\n  \"createdAt\" timestamp(3) DEFAULT (now()) NOT NULL,\n  \"gfmisCode\" text,\n  \"gfmisName\" text,\n  \"id\" text NOT NULL,\n  \"isActive\" bool DEFAULT true NOT NULL,\n  \"level\" int4 NOT NULL,\n  \"nameOffice\" text NOT NULL,\n  \"note\" text,\n  \"parentId\" text,\n  \"updatedAt\" timestamp(3) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"ChartOfAccount\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"ChartOfAccount\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"ChartOfAccount\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.Disbursement",
+    "label": "Create table \"Disbursement\"",
+    "summary": "Creates table \"Disbursement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Disbursement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Disbursement\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Disbursement\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"Disbursement\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Disbursement\"",
+        "sql": "CREATE TABLE \"public\".\"Disbursement\" (\n  \"accountId\" text NOT NULL,\n  \"budgetAmount\" numeric(15,2) NOT NULL,\n  \"createdAt\" timestamp(3) DEFAULT (now()) NOT NULL,\n  \"fiscalYear\" int4 NOT NULL,\n  \"id\" text NOT NULL,\n  \"month\" int4 NOT NULL,\n  \"note\" text,\n  \"spentAmount\" numeric(15,2) NOT NULL,\n  \"spentBudgetFund\" numeric(15,2) DEFAULT '0.00'::numeric(15,2) NOT NULL,\n  \"spentCourtFee\" numeric(15,2) DEFAULT '0.00'::numeric(15,2) NOT NULL,\n  \"updatedAt\" timestamp(3) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Disbursement\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"Disbursement\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"Disbursement\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.DisbursementEntry",
+    "label": "Create table \"DisbursementEntry\"",
+    "summary": "Creates table \"DisbursementEntry\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "DisbursementEntry"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"DisbursementEntry\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"DisbursementEntry\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"DisbursementEntry\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"DisbursementEntry\"",
+        "sql": "CREATE TABLE \"public\".\"DisbursementEntry\" (\n  \"accountId\" text NOT NULL,\n  \"amount\" numeric(15,2) NOT NULL,\n  \"createdAt\" timestamp(3) DEFAULT (now()) NOT NULL,\n  \"description\" text,\n  \"entryDate\" timestamp(3),\n  \"fiscalYear\" int4 NOT NULL,\n  \"fundSource\" \"FundSource\" DEFAULT 'BUDGET'::\"FundSource\" NOT NULL,\n  \"id\" text NOT NULL,\n  \"month\" int4 NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"DisbursementEntry\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"DisbursementEntry\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"DisbursementEntry\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.GfmisAccount",
+    "label": "Create table \"GfmisAccount\"",
+    "summary": "Creates table \"GfmisAccount\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "GfmisAccount"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"GfmisAccount\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GfmisAccount\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"GfmisAccount\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"GfmisAccount\"",
+        "sql": "CREATE TABLE \"public\".\"GfmisAccount\" (\n  \"code\" text NOT NULL,\n  \"createdAt\" timestamp(3) DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"name\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"GfmisAccount\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"GfmisAccount\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"GfmisAccount\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.TransferItem",
+    "label": "Create table \"TransferItem\"",
+    "summary": "Creates table \"TransferItem\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "TransferItem"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"TransferItem\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"TransferItem\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"TransferItem\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"TransferItem\"",
+        "sql": "CREATE TABLE \"public\".\"TransferItem\" (\n  \"activity\" text NOT NULL,\n  \"fiscalYear\" int4 NOT NULL,\n  \"id\" text NOT NULL,\n  \"investmentAmount\" numeric(15,2) DEFAULT '0.00'::numeric(15,2) NOT NULL,\n  \"lineNo\" int4 NOT NULL,\n  \"managementAmount\" numeric(15,2) DEFAULT '0.00'::numeric(15,2) NOT NULL,\n  \"personnelAmount\" numeric(15,2) DEFAULT '0.00'::numeric(15,2) NOT NULL,\n  \"transferId\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"TransferItem\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"TransferItem\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"TransferItem\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "index.BudgetTransfer.BudgetTransfer_documentNo_key",
+    "label": "Create index \"BudgetTransfer_documentNo_key\" on \"BudgetTransfer\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "BudgetTransfer_documentNo_key",
+        "table": "BudgetTransfer"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"BudgetTransfer_documentNo_key\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BudgetTransfer_documentNo_key\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"BudgetTransfer_documentNo_key\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"BudgetTransfer_documentNo_key\"",
+        "sql": "CREATE UNIQUE INDEX \"BudgetTransfer_documentNo_key\" ON \"public\".\"BudgetTransfer\" (\"documentNo\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"BudgetTransfer_documentNo_key\" exists on \"BudgetTransfer\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND \"i\".\"indisunique\" AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"BudgetTransfer_documentNo_key\"",
+          "i",
+          "I",
+          "\"public\".\"BudgetTransfer\"",
+          "btree",
+          "[\"documentNo\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.BudgetTransfer.BudgetTransfer_fiscalYear_quarter_idx",
+    "label": "Create index \"BudgetTransfer_fiscalYear_quarter_idx\" on \"BudgetTransfer\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "BudgetTransfer_fiscalYear_quarter_idx",
+        "table": "BudgetTransfer"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"BudgetTransfer_fiscalYear_quarter_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BudgetTransfer_fiscalYear_quarter_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"BudgetTransfer_fiscalYear_quarter_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"BudgetTransfer_fiscalYear_quarter_idx\"",
+        "sql": "CREATE INDEX \"BudgetTransfer_fiscalYear_quarter_idx\" ON \"public\".\"BudgetTransfer\" (\"fiscalYear\", \"quarter\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"BudgetTransfer_fiscalYear_quarter_idx\" exists on \"BudgetTransfer\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"BudgetTransfer_fiscalYear_quarter_idx\"",
+          "i",
+          "I",
+          "\"public\".\"BudgetTransfer\"",
+          "btree",
+          "[\"fiscalYear\",\"quarter\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ChartOfAccount.ChartOfAccount_code_key",
+    "label": "Create index \"ChartOfAccount_code_key\" on \"ChartOfAccount\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ChartOfAccount_code_key",
+        "table": "ChartOfAccount"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ChartOfAccount_code_key\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ChartOfAccount_code_key\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"ChartOfAccount_code_key\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ChartOfAccount_code_key\"",
+        "sql": "CREATE UNIQUE INDEX \"ChartOfAccount_code_key\" ON \"public\".\"ChartOfAccount\" (\"code\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ChartOfAccount_code_key\" exists on \"ChartOfAccount\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND \"i\".\"indisunique\" AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"ChartOfAccount_code_key\"",
+          "i",
+          "I",
+          "\"public\".\"ChartOfAccount\"",
+          "btree",
+          "[\"code\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ChartOfAccount.ChartOfAccount_gfmisCode_idx",
+    "label": "Create index \"ChartOfAccount_gfmisCode_idx\" on \"ChartOfAccount\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ChartOfAccount_gfmisCode_idx",
+        "table": "ChartOfAccount"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ChartOfAccount_gfmisCode_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ChartOfAccount_gfmisCode_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"ChartOfAccount_gfmisCode_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ChartOfAccount_gfmisCode_idx\"",
+        "sql": "CREATE INDEX \"ChartOfAccount_gfmisCode_idx\" ON \"public\".\"ChartOfAccount\" (\"gfmisCode\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ChartOfAccount_gfmisCode_idx\" exists on \"ChartOfAccount\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"ChartOfAccount_gfmisCode_idx\"",
+          "i",
+          "I",
+          "\"public\".\"ChartOfAccount\"",
+          "btree",
+          "[\"gfmisCode\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ChartOfAccount.ChartOfAccount_parentId_idx",
+    "label": "Create index \"ChartOfAccount_parentId_idx\" on \"ChartOfAccount\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ChartOfAccount_parentId_idx",
+        "table": "ChartOfAccount"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ChartOfAccount_parentId_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ChartOfAccount_parentId_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"ChartOfAccount_parentId_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ChartOfAccount_parentId_idx\"",
+        "sql": "CREATE INDEX \"ChartOfAccount_parentId_idx\" ON \"public\".\"ChartOfAccount\" (\"parentId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ChartOfAccount_parentId_idx\" exists on \"ChartOfAccount\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"ChartOfAccount_parentId_idx\"",
+          "i",
+          "I",
+          "\"public\".\"ChartOfAccount\"",
+          "btree",
+          "[\"parentId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Disbursement.Disbursement_accountId_fiscalYear_month_key",
+    "label": "Create index \"Disbursement_accountId_fiscalYear_month_key\" on \"Disbursement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Disbursement_accountId_fiscalYear_month_key",
+        "table": "Disbursement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Disbursement_accountId_fiscalYear_month_key\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Disbursement_accountId_fiscalYear_month_key\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Disbursement_accountId_fiscalYear_month_key\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Disbursement_accountId_fiscalYear_month_key\"",
+        "sql": "CREATE UNIQUE INDEX \"Disbursement_accountId_fiscalYear_month_key\" ON \"public\".\"Disbursement\" (\"accountId\", \"fiscalYear\", \"month\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Disbursement_accountId_fiscalYear_month_key\" exists on \"Disbursement\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND \"i\".\"indisunique\" AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Disbursement_accountId_fiscalYear_month_key\"",
+          "i",
+          "I",
+          "\"public\".\"Disbursement\"",
+          "btree",
+          "[\"accountId\",\"fiscalYear\",\"month\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Disbursement.Disbursement_fiscalYear_month_idx",
+    "label": "Create index \"Disbursement_fiscalYear_month_idx\" on \"Disbursement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Disbursement_fiscalYear_month_idx",
+        "table": "Disbursement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Disbursement_fiscalYear_month_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Disbursement_fiscalYear_month_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Disbursement_fiscalYear_month_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Disbursement_fiscalYear_month_idx\"",
+        "sql": "CREATE INDEX \"Disbursement_fiscalYear_month_idx\" ON \"public\".\"Disbursement\" (\"fiscalYear\", \"month\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Disbursement_fiscalYear_month_idx\" exists on \"Disbursement\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Disbursement_fiscalYear_month_idx\"",
+          "i",
+          "I",
+          "\"public\".\"Disbursement\"",
+          "btree",
+          "[\"fiscalYear\",\"month\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.DisbursementEntry.DisbursementEntry_accountId_fiscalYear_month_idx",
+    "label": "Create index \"DisbursementEntry_accountId_fiscalYear_month_idx\" on \"DisbursementEntry\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "DisbursementEntry_accountId_fiscalYear_month_idx",
+        "table": "DisbursementEntry"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"DisbursementEntry_accountId_fiscalYear_month_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"DisbursementEntry_accountId_fiscalYear_month_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"DisbursementEntry_accountId_fiscalYear_month_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"DisbursementEntry_accountId_fiscalYear_month_idx\"",
+        "sql": "CREATE INDEX \"DisbursementEntry_accountId_fiscalYear_month_idx\" ON \"public\".\"DisbursementEntry\" (\"accountId\", \"fiscalYear\", \"month\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"DisbursementEntry_accountId_fiscalYear_month_idx\" exists on \"DisbursementEntry\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"DisbursementEntry_accountId_fiscalYear_month_idx\"",
+          "i",
+          "I",
+          "\"public\".\"DisbursementEntry\"",
+          "btree",
+          "[\"accountId\",\"fiscalYear\",\"month\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.DisbursementEntry.DisbursementEntry_fiscalYear_month_idx",
+    "label": "Create index \"DisbursementEntry_fiscalYear_month_idx\" on \"DisbursementEntry\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "DisbursementEntry_fiscalYear_month_idx",
+        "table": "DisbursementEntry"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"DisbursementEntry_fiscalYear_month_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"DisbursementEntry_fiscalYear_month_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"DisbursementEntry_fiscalYear_month_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"DisbursementEntry_fiscalYear_month_idx\"",
+        "sql": "CREATE INDEX \"DisbursementEntry_fiscalYear_month_idx\" ON \"public\".\"DisbursementEntry\" (\"fiscalYear\", \"month\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"DisbursementEntry_fiscalYear_month_idx\" exists on \"DisbursementEntry\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"DisbursementEntry_fiscalYear_month_idx\"",
+          "i",
+          "I",
+          "\"public\".\"DisbursementEntry\"",
+          "btree",
+          "[\"fiscalYear\",\"month\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.GfmisAccount.GfmisAccount_code_key",
+    "label": "Create index \"GfmisAccount_code_key\" on \"GfmisAccount\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "GfmisAccount_code_key",
+        "table": "GfmisAccount"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"GfmisAccount_code_key\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GfmisAccount_code_key\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"GfmisAccount_code_key\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"GfmisAccount_code_key\"",
+        "sql": "CREATE UNIQUE INDEX \"GfmisAccount_code_key\" ON \"public\".\"GfmisAccount\" (\"code\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"GfmisAccount_code_key\" exists on \"GfmisAccount\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND \"i\".\"indisunique\" AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"GfmisAccount_code_key\"",
+          "i",
+          "I",
+          "\"public\".\"GfmisAccount\"",
+          "btree",
+          "[\"code\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.GfmisAccount.GfmisAccount_name_idx",
+    "label": "Create index \"GfmisAccount_name_idx\" on \"GfmisAccount\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "GfmisAccount_name_idx",
+        "table": "GfmisAccount"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"GfmisAccount_name_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GfmisAccount_name_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"GfmisAccount_name_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"GfmisAccount_name_idx\"",
+        "sql": "CREATE INDEX \"GfmisAccount_name_idx\" ON \"public\".\"GfmisAccount\" (\"name\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"GfmisAccount_name_idx\" exists on \"GfmisAccount\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"GfmisAccount_name_idx\"",
+          "i",
+          "I",
+          "\"public\".\"GfmisAccount\"",
+          "btree",
+          "[\"name\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.TransferItem.TransferItem_transferId_idx",
+    "label": "Create index \"TransferItem_transferId_idx\" on \"TransferItem\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "TransferItem_transferId_idx",
+        "table": "TransferItem"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"TransferItem_transferId_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"TransferItem_transferId_idx\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"TransferItem_transferId_idx\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"TransferItem_transferId_idx\"",
+        "sql": "CREATE INDEX \"TransferItem_transferId_idx\" ON \"public\".\"TransferItem\" (\"transferId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"TransferItem_transferId_idx\" exists on \"TransferItem\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"TransferItem_transferId_idx\"",
+          "i",
+          "I",
+          "\"public\".\"TransferItem\"",
+          "btree",
+          "[\"transferId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ChartOfAccount.ChartOfAccount_parentId_fkey",
+    "label": "Add foreign key \"ChartOfAccount_parentId_fkey\" on \"ChartOfAccount\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ChartOfAccount_parentId_fkey",
+        "table": "ChartOfAccount"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ChartOfAccount_parentId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ChartOfAccount_parentId_fkey",
+          "public",
+          "\"public\".\"ChartOfAccount\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"ChartOfAccount_parentId_fkey\" on \"ChartOfAccount\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ChartOfAccount_parentId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ChartOfAccount\"\nADD CONSTRAINT \"ChartOfAccount_parentId_fkey\"\nFOREIGN KEY (\"parentId\")\nREFERENCES \"public\".\"ChartOfAccount\" (\"id\")\nON DELETE CASCADE\nON UPDATE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ChartOfAccount_parentId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "ChartOfAccount_parentId_fkey",
+          "public",
+          "\"public\".\"ChartOfAccount\"",
+          "f",
+          "[\"parentId\"]",
+          "\"public\".\"ChartOfAccount\"",
+          "[\"id\"]",
+          "c",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Disbursement.Disbursement_accountId_fkey",
+    "label": "Add foreign key \"Disbursement_accountId_fkey\" on \"Disbursement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Disbursement_accountId_fkey",
+        "table": "Disbursement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Disbursement_accountId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Disbursement_accountId_fkey",
+          "public",
+          "\"public\".\"Disbursement\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"Disbursement_accountId_fkey\" on \"Disbursement\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Disbursement_accountId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Disbursement\"\nADD CONSTRAINT \"Disbursement_accountId_fkey\"\nFOREIGN KEY (\"accountId\")\nREFERENCES \"public\".\"ChartOfAccount\" (\"id\")\nON DELETE CASCADE\nON UPDATE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Disbursement_accountId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "Disbursement_accountId_fkey",
+          "public",
+          "\"public\".\"Disbursement\"",
+          "f",
+          "[\"accountId\"]",
+          "\"public\".\"ChartOfAccount\"",
+          "[\"id\"]",
+          "c",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.DisbursementEntry.DisbursementEntry_accountId_fkey",
+    "label": "Add foreign key \"DisbursementEntry_accountId_fkey\" on \"DisbursementEntry\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "DisbursementEntry_accountId_fkey",
+        "table": "DisbursementEntry"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"DisbursementEntry_accountId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "DisbursementEntry_accountId_fkey",
+          "public",
+          "\"public\".\"DisbursementEntry\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"DisbursementEntry_accountId_fkey\" on \"DisbursementEntry\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"DisbursementEntry_accountId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"DisbursementEntry\"\nADD CONSTRAINT \"DisbursementEntry_accountId_fkey\"\nFOREIGN KEY (\"accountId\")\nREFERENCES \"public\".\"ChartOfAccount\" (\"id\")\nON DELETE CASCADE\nON UPDATE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"DisbursementEntry_accountId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "DisbursementEntry_accountId_fkey",
+          "public",
+          "\"public\".\"DisbursementEntry\"",
+          "f",
+          "[\"accountId\"]",
+          "\"public\".\"ChartOfAccount\"",
+          "[\"id\"]",
+          "c",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.TransferItem.TransferItem_transferId_fkey",
+    "label": "Add foreign key \"TransferItem_transferId_fkey\" on \"TransferItem\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "TransferItem_transferId_fkey",
+        "table": "TransferItem"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"TransferItem_transferId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "TransferItem_transferId_fkey",
+          "public",
+          "\"public\".\"TransferItem\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"TransferItem_transferId_fkey\" on \"TransferItem\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"TransferItem_transferId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"TransferItem\"\nADD CONSTRAINT \"TransferItem_transferId_fkey\"\nFOREIGN KEY (\"transferId\")\nREFERENCES \"public\".\"BudgetTransfer\" (\"id\")\nON DELETE CASCADE\nON UPDATE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"TransferItem_transferId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "TransferItem_transferId_fkey",
+          "public",
+          "\"public\".\"TransferItem\"",
+          "f",
+          "[\"transferId\"]",
+          "\"public\".\"BudgetTransfer\"",
+          "[\"id\"]",
+          "c",
+          "c"
+        ]
+      }
+    ]
+  }
+]
