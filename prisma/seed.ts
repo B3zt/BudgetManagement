@@ -18,13 +18,15 @@ async function main() {
   ];
 
   for (const r of roots) {
-    const existing = await db.orm.public.ChartOfAccount.where({ code: r.code }).first();
-    if (!existing) {
-      await db.orm.public.ChartOfAccount.create({ code: r.code, level: 1, nameOffice: r.nameOffice });
-    }
+    await prisma.chartOfAccount.upsert({
+      where: { code: r.code },
+      update: {},
+      create: { code: r.code, level: 1, nameOffice: r.nameOffice },
+    });
+
   }
 
-  console.log("Seed เสร็จสิ้น: สร้างบัญชีระดับ 1 ครบ 4 รายการ");
+   console.log("Seed เสร็จสิ้น: สร้างบัญชีระดับ 1 ครบ 4 รายการ");
 }
 
 main()
