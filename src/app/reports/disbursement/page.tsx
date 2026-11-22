@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { ChartOfAccount, Disbursement } from "@/lib/types";
+import type { DisbursementItem, Disbursement } from "@/lib/types";
 import { CATEGORY_LABELS, categoryOfAccount, sortByCode } from "@/lib/accountUtils";
 import { THAI_MONTHS, currentThaiFiscalYear, formatBaht, formatPercent, monthLabel } from "@/lib/thai";
 import type { BudgetCategory } from "@/lib/types";
@@ -9,13 +9,13 @@ import type { BudgetCategory } from "@/lib/types";
 const CATEGORY_ORDER: BudgetCategory[] = ["COMPENSATION", "SERVICES", "MATERIALS", "UTILITIES"];
 
 type AggRow = {
-  account: ChartOfAccount;
+  account: DisbursementItem;
   budget: number;
   spent: number;
 };
 
 export default function DisbursementReportPage() {
-  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
+  const [accounts, setAccounts] = useState<DisbursementItem[]>([]);
   const [fiscalYear, setFiscalYear] = useState(currentThaiFiscalYear());
   const [month, setMonth] = useState<number | "ALL">("ALL");
   const [disbursements, setDisbursements] = useState<Disbursement[]>([]);
@@ -23,7 +23,7 @@ export default function DisbursementReportPage() {
   const [expanded, setExpanded] = useState<Set<BudgetCategory>>(new Set(CATEGORY_ORDER));
 
   useEffect(() => {
-    fetch("/api/accounts")
+    fetch("/api/disbursement-items")
       .then((r) => r.json())
       .then((json) => setAccounts(json.data));
   }, []);
@@ -38,7 +38,7 @@ export default function DisbursementReportPage() {
   }, [fiscalYear, month]);
 
   const accountsById = useMemo(() => {
-    const m = new Map<string, ChartOfAccount>();
+    const m = new Map<string, DisbursementItem>();
     accounts.forEach((a) => m.set(a.id, a));
     return m;
   }, [accounts]);
@@ -47,7 +47,7 @@ export default function DisbursementReportPage() {
   const rowsByCategory = useMemo(() => {
     const perAccount = new Map<string, AggRow>();
     disbursements.forEach((d) => {
-      const acc = d.account ?? accountsById.get(d.accountId);
+      const acc = d.item ?? accountsById.get(d.itemId);
       if (!acc) return;
       const existing = perAccount.get(acc.id);
       const budget = Number(d.budgetAmount);
@@ -239,7 +239,7 @@ export default function DisbursementReportPage() {
                         {rows.map((r) => (
                           <tr key={r.account.id} className="border-t border-line">
                             <td className="px-4 py-2 font-mono text-xs text-navy-700">{r.account.code}</td>
-                            <td className="px-4 py-2">{r.account.nameOffice}</td>
+                            <td className="px-4 py-2">{r.account.name}</td>
                             <td className="px-4 py-2 text-right">{formatBaht(r.budget)}</td>
                             <td className="px-4 py-2 text-right">{formatBaht(r.spent)}</td>
                             <td className="px-4 py-2 text-right">{formatBaht(r.budget - r.spent)}</td>

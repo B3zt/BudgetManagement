@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { ChartOfAccount, Disbursement } from "@/lib/types";
+import type { DisbursementItem, Disbursement } from "@/lib/types";
 import { sortByCode } from "@/lib/accountUtils";
 import {
   QUARTER_MONTHS,
@@ -28,7 +28,7 @@ function monthsOfPeriod(period: string): number[] {
 }
 
 export default function FundReportPage() {
-  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
+  const [accounts, setAccounts] = useState<DisbursementItem[]>([]);
   const [disbursements, setDisbursements] = useState<Disbursement[]>([]);
   // ปี พ.ศ. ตามปีปฏิทิน (ม.ค. - ธ.ค.)
   const [year, setYear] = useState(new Date().getFullYear() + 543);
@@ -58,7 +58,7 @@ export default function FundReportPage() {
   }, [activity, office]);
 
   useEffect(() => {
-    fetch("/api/accounts")
+    fetch("/api/disbursement-items")
       .then((r) => r.json())
       .then((json) => setAccounts(json.data ?? []));
   }, []);
@@ -79,7 +79,7 @@ export default function FundReportPage() {
   }, [year]);
 
   const accountsById = useMemo(() => {
-    const m = new Map<string, ChartOfAccount>();
+    const m = new Map<string, DisbursementItem>();
     accounts.forEach((a) => m.set(a.id, a));
     return m;
   }, [accounts]);
@@ -96,10 +96,10 @@ export default function FundReportPage() {
       const courtFee = Number(d.spentCourtFee) || 0;
       // ข้อมูลเก่าก่อนแยกแหล่งเงิน: ยอดรวมอย่างเดียว ถือเป็นเงินงบประมาณ
       if (fund + courtFee === 0 && Number(d.spentAmount) > 0) fund = Number(d.spentAmount);
-      const cur = leaf.get(d.accountId) ?? { fund: 0, courtFee: 0 };
+      const cur = leaf.get(d.itemId) ?? { fund: 0, courtFee: 0 };
       cur.fund += fund;
       cur.courtFee += courtFee;
-      leaf.set(d.accountId, cur);
+      leaf.set(d.itemId, cur);
     });
 
     const m = new Map<string, Sums>();
@@ -108,7 +108,7 @@ export default function FundReportPage() {
       if (parentIds.has(a.id)) return;
       const v = leaf.get(a.id);
       if (!v) return;
-      let cur: ChartOfAccount | undefined = a;
+      let cur: DisbursementItem | undefined = a;
       const seen = new Set<string>();
       while (cur && !seen.has(cur.id)) {
         seen.add(cur.id);
@@ -270,7 +270,7 @@ export default function FundReportPage() {
                     <tr key={a.id} className={`align-top print:break-inside-avoid ${isParent ? "font-semibold bg-navy-50/60 print:bg-transparent" : ""}`}>
                       <td className={cell} style={{ paddingLeft: `${12 + (a.level - 1) * 20}px` }}>
                         <span className="mr-2">{a.code}</span>
-                        {a.nameOffice}
+                        {a.name}
                       </td>
                       <td className={`${cell} text-right`}>{dash(s.fund)}</td>
                       <td className={`${cell} text-right`}>{dash(s.courtFee)}</td>

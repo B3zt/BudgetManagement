@@ -24,7 +24,15 @@ async function main() {
     }
   }
 
-  console.log("Seed เสร็จสิ้น: สร้างบัญชีระดับ 1 ครบ 4 รายการ");
+  // รายการเบิกจ่าย (แยกจากผังบัญชี) หมวดหลักทั้ง 4
+  for (const r of roots) {
+    const existing = await db.orm.public.DisbursementItem.where({ code: r.code }).first();
+    if (!existing) {
+      await db.orm.public.DisbursementItem.create({ code: r.code, level: 1, name: r.nameOffice });
+    }
+  }
+
+  console.log("Seed เสร็จสิ้น: สร้างหมวดหลัก 4 รายการ ทั้งในผังบัญชีและรายการเบิกจ่าย");
 }
 
 main()

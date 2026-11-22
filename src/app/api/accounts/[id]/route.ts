@@ -67,17 +67,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     );
   }
 
-  // ป้องกันการลบบัญชีที่มีข้อมูลเบิกจ่าย (ไม่เช่นนั้นข้อมูลเบิกจ่ายและรายการเบิกจ่ายจะถูกลบตามไปด้วย)
-  const used =
-    (await db.orm.public.Disbursement.where({ accountId: params.id }).aggregate((a) => ({ total: a.count() }))).total +
-    (await db.orm.public.DisbursementEntry.where({ accountId: params.id }).aggregate((a) => ({ total: a.count() }))).total;
-  if (used > 0) {
-    return NextResponse.json(
-      { error: "ไม่สามารถลบได้ เนื่องจากบัญชีนี้มีข้อมูลเบิกจ่ายอยู่ (ให้ปิดการใช้งานแทน)" },
-      { status: 409 }
-    );
-  }
-
   await db.orm.public.ChartOfAccount.where({ id: params.id }).delete();
   return NextResponse.json({ success: true });
 }

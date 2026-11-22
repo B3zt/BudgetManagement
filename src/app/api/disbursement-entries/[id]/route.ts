@@ -36,7 +36,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       ...(amount !== undefined && { amount: Number(amount).toFixed(2) }),
     });
 
-  const disbursement = await recomputeDisbursement(existing.accountId, existing.fiscalYear, existing.month);
+  const disbursement = await recomputeDisbursement(existing.itemId, existing.fiscalYear, existing.month);
   return NextResponse.json({ data: updated, disbursement });
 }
 
@@ -48,6 +48,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: "ไม่พบรายการเบิกจ่ายนี้" }, { status: 404 });
   }
   await db.orm.public.DisbursementEntry.where({ id: params.id }).delete();
-  const disbursement = await recomputeDisbursement(existing.accountId, existing.fiscalYear, existing.month);
+  const disbursement = await recomputeDisbursement(existing.itemId, existing.fiscalYear, existing.month);
   return NextResponse.json({ success: true, disbursement });
 }

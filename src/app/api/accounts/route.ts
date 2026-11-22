@@ -47,16 +47,6 @@ export async function POST(req: NextRequest) {
     }
     parentId = parent.id;
 
-    // บัญชีที่มีข้อมูลเบิกจ่ายแล้ว จะกลายเป็นบัญชีแม่ไม่ได้ (ยอดเดิมจะไม่ถูกนับในผลรวมและรายงาน)
-    const used =
-      (await db.orm.public.Disbursement.where({ accountId: parent.id }).aggregate((a) => ({ total: a.count() }))).total +
-      (await db.orm.public.DisbursementEntry.where({ accountId: parent.id }).aggregate((a) => ({ total: a.count() }))).total;
-    if (used > 0) {
-      return NextResponse.json(
-        { error: `บัญชี ${parentCode} มีข้อมูลเบิกจ่ายอยู่แล้ว จึงเพิ่มรายการย่อยไม่ได้` },
-        { status: 400 }
-      );
-    }
   }
 
   if (level > 5) {

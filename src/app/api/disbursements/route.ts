@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       fiscalYear: Number(fiscalYear),
       ...(month ? { month: Number(month) } : {}),
     })
-    .include("account")
+    .include("item")
     .orderBy((m) => m.month.asc())
     .all();
 
@@ -33,10 +33,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const db = getDb();
   const body = await req.json();
-  const { accountId, fiscalYear, month, budgetAmount, spentBudgetFund, spentCourtFee, note } = body;
+  const { itemId, fiscalYear, month, budgetAmount, spentBudgetFund, spentCourtFee, note } = body;
 
-  if (!accountId || !fiscalYear || !month) {
-    return NextResponse.json({ error: "ข้อมูลไม่ครบถ้วน (accountId, fiscalYear, month)" }, { status: 400 });
+  if (!itemId || !fiscalYear || !month) {
+    return NextResponse.json({ error: "ข้อมูลไม่ครบถ้วน (itemId, fiscalYear, month)" }, { status: 400 });
   }
   if (month < 1 || month > 12) {
     return NextResponse.json({ error: "เดือนไม่ถูกต้อง" }, { status: 400 });
@@ -49,13 +49,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "จำนวนเงินไม่ถูกต้อง" }, { status: 400 });
   }
 
-  const account = await db.orm.public.ChartOfAccount.first({ id: accountId });
-  if (!account) {
+  const item = await db.orm.public.DisbursementItem.first({ id: itemId });
+  if (!item) {
     return NextResponse.json({ error: "ไม่พบรายการบัญชีนี้" }, { status: 404 });
   }
 
   // ถ้าเดือนนั้นมีรายการเบิกจ่ายย่อยแล้ว ยอดเบิกจ่ายใช้ผลรวมของรายการย่อยเสมอ (ไม่รับค่าที่ส่งมา)
-  const fromEntries = await entrySums(accountId, Number(fiscalYear), Number(month));
+  const fromEntries = await entrySums(itemId, Number(fiscalYear), Number(month));
   const finalFund = fromEntries ? fromEntries.fund : fund;
   const finalCourtFee = fromEntries ? fromEntries.courtFee : courtFee;
   const spent = Math.round((finalFund + finalCourtFee) * 100) / 100;
@@ -69,17 +69,17 @@ export async function POST(req: NextRequest) {
   };
 
   const existing = await db.orm.public.Disbursement
-    .where({ accountId, fiscalYear: Number(fiscalYear), month: Number(month) })
+    .where({ itemId, fiscalYear: Number(fiscalYear), month: Number(month) })
     .first();
 
   if (existing) {
     await db.orm.public.Disbursement.where({ id: existing.id }).update(data);
-    const record = await db.orm.public.Disbursement.include("account").first({ id: existing.id });
+    const record = await db.orm.public.Disbursement.include("item").first({ id: existing.id });
     return NextResponse.json({ data: record });
   }
 
-  const record = await db.orm.public.Disbursement.include("account").create({
-    accountId,
+  const record = await db.orm.public.Disbursement.include("item").create({
+    itemId,
     fiscalYear: Number(fiscalYear),
     month: Number(month),
     ...data,

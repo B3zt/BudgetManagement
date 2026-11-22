@@ -48,19 +48,45 @@ model ChartOfAccount {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([parentId])
+  @@index([gfmisCode])
+}
+
+// รายการเบิกจ่าย (ลำดับชั้น 5 ระดับ) — ใช้ในหน้าบันทึกข้อมูลเบิกจ่ายและรายงาน แยกจากผังบัญชี (ChartOfAccount)
+model DisbursementItem {
+  id String @id @default(cuid())
+
+  // รหัสรายการ เช่น "2.3" หรือ "2.10.1"
+  code String @unique
+
+  // ระดับของรายการ 1-5 คำนวณจากจำนวนส่วนของ code
+  level Int
+
+  // ชื่อรายการ
+  name String
+
+  // ลำดับชั้น (self relation)
+  parentId String?
+  parent   DisbursementItem?  @relation("ItemHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children DisbursementItem[] @relation("ItemHierarchy")
+
+  isActive  Boolean  @default(true)
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   disbursements       Disbursement[]
   disbursementEntries DisbursementEntry[]
 
   @@index([parentId])
-  @@index([gfmisCode])
 }
 
 // รายการเบิกจ่ายจริงต่อบัญชี ต่อเดือน (ใช้ทำรายงานรายเดือน/รายไตรมาส และรายงาน 4 หมวด)
 model Disbursement {
   id String @id @default(cuid())
 
-  account   ChartOfAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  accountId String
+  item   DisbursementItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId String
 
   fiscalYear Int // ปีงบประมาณ พ.ศ.
   month      Int // 1-12
@@ -78,7 +104,7 @@ model Disbursement {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([accountId, fiscalYear, month])
+  @@unique([itemId, fiscalYear, month])
   @@index([fiscalYear, month])
 }
 
@@ -93,8 +119,8 @@ enum FundSource {
 model DisbursementEntry {
   id String @id @default(cuid())
 
-  account   ChartOfAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  accountId String
+  item   DisbursementItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId String
 
   fiscalYear Int // ปีงบประมาณ พ.ศ.
   month      Int // 1-12 เดือนที่นับยอด
@@ -106,7 +132,7 @@ model DisbursementEntry {
 
   createdAt DateTime @default(now())
 
-  @@index([accountId, fiscalYear, month])
+  @@index([itemId, fiscalYear, month])
   @@index([fiscalYear, month])
 }
 

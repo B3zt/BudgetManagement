@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
-import type { ChartOfAccount, Disbursement, DisbursementEntry, FundSource } from "@/lib/types";
+import type { DisbursementItem, Disbursement, DisbursementEntry, FundSource } from "@/lib/types";
 import { FUND_SOURCE_LABELS } from "@/lib/types";
 import { CATEGORY_LABELS, categoryOfAccount, sortByCode } from "@/lib/accountUtils";
 import { THAI_MONTHS, currentThaiFiscalYear, formatBaht, formatThaiShortDate } from "@/lib/thai";
@@ -10,7 +10,7 @@ import { amountOrZero, parseAmount } from "@/lib/amount";
 type Field = "budget" | "fund" | "courtFee";
 
 type Row = {
-  account: ChartOfAccount;
+  account: DisbursementItem;
   budget: string; // งบประมาณที่ได้รับจัดสรร
   fund: string; // เบิกจ่ายจากเงินงบประมาณ
   courtFee: string; // เบิกจ่ายจากเงินค่าธรรมเนียมศาล
@@ -28,13 +28,17 @@ type EntryForm = { id: string | null; date: string; description: string; fundSou
 const emptyForm = (): EntryForm => ({ id: null, date: "", description: "", fundSource: "BUDGET", amount: "" });
 
 export default function DisbursementsEntryPage() {
-  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
+  const [accounts, setAccounts] = useState<DisbursementItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [fiscalYear, setFiscalYear] = useState(currentThaiFiscalYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [rows, setRows] = useState<Record<string, Row>>({});
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [search, setSearch] = useState("");
+  const [ready, setReady] = useState(false);
+  const [manageMode, setManageMode] = useState(false);
+  const [newItem, setNewItem] = useState<{ parentId: string; code: string; name: string }>({ parentId: "", code: "", name: "" });
+  const [itemSaving, setItemSaving] = useState(false);
   const [entries, setEntries] = useState<Record<string, DisbursementEntry[]>>({});
   const [panelOpen, setPanelOpen] = useState(false);
   const [openId, setOpenId] = useState<string>(""); // บัญชีที่เลือกในแผงเพิ่มรายการเบิกจ่าย
@@ -42,7 +46,7 @@ export default function DisbursementsEntryPage() {
   const [entrySaving, setEntrySaving] = useState(false);
 
   const accountsById = useMemo(() => {
-    const m = new Map<string, ChartOfAccount>();
+    const m = new Map<string, DisbursementItem>();
     accounts.forEach((a) => m.set(a.id, a));
     return m;
   }, [accounts]);
@@ -50,9 +54,12 @@ export default function DisbursementsEntryPage() {
   const parentIds = useMemo(() => new Set(accounts.map((a) => a.parentId).filter(Boolean) as string[]), [accounts]);
 
   useEffect(() => {
-    fetch("/api/accounts")
+    fetch("/api/disbursement-items")
       .then((r) => r.json())
-      .then((json) => setAccounts(json.data))
+      .then((json) => {
+        setAccounts(json.data);
+        setReady(true);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -60,7 +67,7 @@ export default function DisbursementsEntryPage() {
     const res = await fetch(`/api/disbursements?fiscalYear=${fiscalYear}&month=${month}`);
     const json = await res.json();
     const existing: Disbursement[] = json.data ?? [];
-    const byAccount = new Map(existing.map((d) => [d.accountId, d]));
+    const byAccount = new Map(existing.map((d) => [d.itemId, d]));
 
     const next: Record<string, Row> = {};
     accounts.forEach((a) => {
@@ -81,7 +88,7 @@ export default function DisbursementsEntryPage() {
     const ejson = await eres.json();
     const grouped: Record<string, DisbursementEntry[]> = {};
     (ejson.data ?? []).forEach((e: DisbursementEntry) => {
-      (grouped[e.accountId] ??= []).push(e);
+      (grouped[e.itemId] ??= []).push(e);
     });
     setEntries(grouped);
     setForm(emptyForm());
@@ -124,7 +131,7 @@ export default function DisbursementsEntryPage() {
     return nums.every((n) => n !== null && n > 0) ? (nums as number[]) : null;
   };
 
-  const submitEntry = async (accountId: string) => {
+  const submitEntry = async (itemId: string) => {
     const terms = form.id ? (() => { const n = parseAmount(form.amount); return n !== null && n > 0 ? [n] : null; })() : splitTerms(form.amount);
     if (!terms) {
       alert("กรุณากรอกจำนวนเงินมากกว่า 0 (หลายยอดพิมพ์คั่นด้วย + เช่น 1,000+3,400+1,000)");
@@ -146,7 +153,7 @@ export default function DisbursementsEntryPage() {
         const res = await fetch(form.id ? `/api/disbursement-entries/${form.id}` : "/api/disbursement-entries", {
           method: form.id ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form.id ? payload : { ...payload, accountId, fiscalYear, month }),
+          body: JSON.stringify(form.id ? payload : { ...payload, itemId, fiscalYear, month }),
         });
         // eslint-disable-next-line no-await-in-loop
         const json = await res.json();
@@ -156,13 +163,13 @@ export default function DisbursementsEntryPage() {
         lastDisbursement = json.disbursement;
       }
       setEntries((prev) => {
-        const list = prev[accountId] ?? [];
+        const list = prev[itemId] ?? [];
         return {
           ...prev,
-          [accountId]: updated ? list.map((x) => (x.id === updated!.id ? updated! : x)) : [...list, ...created],
+          [itemId]: updated ? list.map((x) => (x.id === updated!.id ? updated! : x)) : [...list, ...created],
         };
       });
-      if (lastDisbursement) applyDisbursement(accountId, lastDisbursement);
+      if (lastDisbursement) applyDisbursement(itemId, lastDisbursement);
       setForm({ ...emptyForm(), date: form.date, fundSource: form.fundSource });
     } catch (err) {
       alert(err instanceof Error && err.message ? err.message : "บันทึกรายการไม่สำเร็จ กรุณาลองใหม่");
@@ -171,7 +178,7 @@ export default function DisbursementsEntryPage() {
     }
   };
 
-  const deleteEntry = async (accountId: string, e: DisbursementEntry) => {
+  const deleteEntry = async (itemId: string, e: DisbursementEntry) => {
     if (!confirm(`ลบรายการนี้ (${formatBaht(Number(e.amount))} บาท) ?`)) return;
     const res = await fetch(`/api/disbursement-entries/${e.id}`, { method: "DELETE" });
     const json = await res.json();
@@ -179,15 +186,116 @@ export default function DisbursementsEntryPage() {
       alert(json.error ?? "ลบไม่สำเร็จ");
       return;
     }
-    setEntries((prev) => ({ ...prev, [accountId]: (prev[accountId] ?? []).filter((x) => x.id !== e.id) }));
-    applyDisbursement(accountId, json.disbursement);
+    setEntries((prev) => ({ ...prev, [itemId]: (prev[itemId] ?? []).filter((x) => x.id !== e.id) }));
+    applyDisbursement(itemId, json.disbursement);
     if (form.id === e.id) setForm(emptyForm());
   };
 
   useEffect(() => {
-    if (accounts.length > 0) loadPeriod();
+    // โหลดใหม่เฉพาะเมื่อเปลี่ยนปี/เดือน (การเพิ่มรายการใหม่ไม่ล้างยอดที่ยังไม่ได้บันทึก)
+    if (ready) loadPeriod();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accounts, fiscalYear, month]);
+  }, [ready, fiscalYear, month]);
+
+  // ---- จัดการรายการ (เพิ่ม / แก้ชื่อ / ลบ) — รายการเบิกจ่ายแยกจากผังบัญชี ----
+  const suggestCode = (parentId: string) => {
+    const parent = parentId ? accountsById.get(parentId) : undefined;
+    const siblings = accounts.filter((a) => (a.parentId ?? "") === parentId);
+    const last = siblings.reduce((mx, a) => Math.max(mx, Number(a.code.split(".").pop()) || 0), 0);
+    return parent ? `${parent.code}.${last + 1}` : String(last + 1);
+  };
+
+  const chooseParent = (parentId: string) => setNewItem({ parentId, code: suggestCode(parentId), name: "" });
+
+  const startAddUnder = (parentId: string) => {
+    setManageMode(true);
+    chooseParent(parentId);
+  };
+
+  const submitItem = async () => {
+    if (!newItem.name.trim()) {
+      alert("กรุณาระบุชื่อรายการ");
+      return;
+    }
+    setItemSaving(true);
+    try {
+      const res = await fetch("/api/disbursement-items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: newItem.code.trim(), name: newItem.name.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      const created: DisbursementItem = json.data;
+      setAccounts((prev) => [...prev, created].sort(sortByCode));
+      setRows((prev) => ({
+        ...prev,
+        [created.id]: { account: created, budget: "", fund: "", courtFee: "", dirty: false, saving: false, saved: false },
+      }));
+      setSearch("");
+      setCategoryFilter("ALL");
+      setNewItem({ parentId: newItem.parentId, code: suggestCodeAfter(newItem.parentId, created), name: "" });
+    } catch (err) {
+      alert(err instanceof Error && err.message ? err.message : "เพิ่มรายการไม่สำเร็จ");
+    } finally {
+      setItemSaving(false);
+    }
+  };
+
+  // รหัสถัดไปหลังเพิ่มรายการ (state ของ accounts ยังไม่อัปเดตทันที จึงคิดจากรายการที่เพิ่งสร้าง)
+  const suggestCodeAfter = (parentId: string, justCreated: DisbursementItem) => {
+    const parent = parentId ? accountsById.get(parentId) : undefined;
+    const last = Number(justCreated.code.split(".").pop()) || 0;
+    return parent ? `${parent.code}.${last + 1}` : String(last + 1);
+  };
+
+  const renameItem = async (a: DisbursementItem) => {
+    const next = window.prompt(`แก้ชื่อรายการ ${a.code}`, a.name);
+    if (next === null || !next.trim() || next.trim() === a.name) return;
+    const res = await fetch(`/api/disbursement-items/${a.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: next.trim() }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      alert(json.error ?? "แก้ไขไม่สำเร็จ");
+      return;
+    }
+    setAccounts((prev) => prev.map((x) => (x.id === a.id ? { ...x, name: next.trim() } : x)));
+  };
+
+  const deleteItem = async (a: DisbursementItem) => {
+    if (!confirm(`ลบรายการ ${a.code} ${a.name} ?`)) return;
+    const res = await fetch(`/api/disbursement-items/${a.id}`, { method: "DELETE" });
+    const json = await res.json();
+    if (!res.ok) {
+      alert(json.error ?? "ลบไม่สำเร็จ");
+      return;
+    }
+    setAccounts((prev) => prev.filter((x) => x.id !== a.id));
+    setRows((prev) => {
+      const { [a.id]: _removed, ...rest } = prev;
+      return rest;
+    });
+  };
+
+  const rowTools = (a: DisbursementItem) =>
+    manageMode ? (
+      <span className="ml-3 whitespace-nowrap text-xs font-normal">
+        {a.level < 5 && (
+          <button onClick={() => startAddUnder(a.id)} className="text-navy-500 hover:text-navy-900 mr-2">
+            + ย่อย
+          </button>
+        )}
+        <button onClick={() => renameItem(a)} className="text-navy-500 hover:text-navy-900 mr-2">
+          แก้ชื่อ
+        </button>
+        <button onClick={() => deleteItem(a)} className="text-bad hover:underline">
+          ลบ
+        </button>
+      </span>
+    ) : null;
 
   // ยอดของบัญชีที่มีรายการย่อย = ผลรวมของรายการปลายทางทั้งหมดใต้บัญชีนั้น (ตามรายงานตัวอย่าง)
   const sums = useMemo(() => {
@@ -198,7 +306,7 @@ export default function DisbursementsEntryPage() {
       const r = rows[a.id];
       if (!r) return;
       const v = { budget: amountOrZero(r.budget), fund: amountOrZero(r.fund), courtFee: amountOrZero(r.courtFee) };
-      let cur: ChartOfAccount | undefined = a;
+      let cur: DisbursementItem | undefined = a;
       const seen = new Set<string>();
       while (cur && !seen.has(cur.id)) {
         seen.add(cur.id);
@@ -236,8 +344,8 @@ export default function DisbursementsEntryPage() {
       const q = search.trim().toLowerCase();
       const keep = new Set<string>();
       list.forEach((a) => {
-        if (a.code.includes(q) || a.nameOffice.toLowerCase().includes(q)) {
-          let cur: ChartOfAccount | undefined = a;
+        if (a.code.includes(q) || a.name.toLowerCase().includes(q)) {
+          let cur: DisbursementItem | undefined = a;
           while (cur && !keep.has(cur.id)) {
             keep.add(cur.id);
             cur = cur.parentId ? accountsById.get(cur.parentId) : undefined;
@@ -281,7 +389,7 @@ export default function DisbursementsEntryPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          accountId: id,
+          itemId: id,
           fiscalYear,
           month,
           budgetAmount: amountOrZero(row.budget),
@@ -374,8 +482,19 @@ export default function DisbursementsEntryPage() {
             />
           </div>
           <button
+            onClick={() => {
+              setManageMode((v) => !v);
+              if (!manageMode) chooseParent("");
+            }}
+            className={`ml-auto rounded border text-sm font-medium px-4 py-2.5 ${
+              manageMode ? "border-brass-500 bg-brass-50 text-brass-700" : "border-line text-navy-700 hover:border-brass-500"
+            }`}
+          >
+            {manageMode ? "ปิดการจัดการรายการ" : "จัดการรายการ"}
+          </button>
+          <button
             onClick={() => openPanel()}
-            className="ml-auto rounded border border-navy-900 text-navy-900 text-sm font-medium px-4 py-2.5 hover:bg-navy-50"
+            className="rounded border border-navy-900 text-navy-900 text-sm font-medium px-4 py-2.5 hover:bg-navy-50"
           >
             + เพิ่มรายการเบิกจ่าย
           </button>
@@ -391,6 +510,60 @@ export default function DisbursementsEntryPage() {
 
       <div className="px-8 py-6">
         {loading && <p className="text-sm text-navy-300">กำลังโหลด...</p>}
+        {manageMode && (
+          <div className="bg-white rounded-md border border-brass-500 p-4 mb-4">
+            <p className="text-sm font-medium text-navy-900 mb-1">เพิ่มรายการ</p>
+            <p className="text-xs text-navy-500 mb-3">
+              รายการเบิกจ่ายแยกจากผังบัญชี — เพิ่ม แก้ชื่อ หรือลบได้ที่นี่โดยไม่กระทบหน้าผังบัญชี
+              (ใช้ปุ่ม "+ ย่อย" / "แก้ชื่อ" / "ลบ" ที่แต่ละบรรทัดได้ด้วย)
+            </p>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-[260px]">
+                <label className="block text-xs text-navy-500 mb-1">อยู่ใต้รายการ</label>
+                <select
+                  value={newItem.parentId}
+                  onChange={(e) => chooseParent(e.target.value)}
+                  className="w-full text-sm rounded border border-line px-2 py-1.5"
+                >
+                  <option value="">— ระดับ 1 (หมวดหลัก) —</option>
+                  {accounts
+                    .filter((a) => a.level < 5)
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.code} {a.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-navy-500 mb-1">รหัส</label>
+                <input
+                  type="text"
+                  value={newItem.code}
+                  onChange={(e) => setNewItem({ ...newItem, code: e.target.value })}
+                  className="w-32 text-sm font-mono rounded border border-line px-2 py-1.5"
+                />
+              </div>
+              <div className="flex-1 min-w-[240px]">
+                <label className="block text-xs text-navy-500 mb-1">ชื่อรายการ</label>
+                <input
+                  type="text"
+                  value={newItem.name}
+                  onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                  onKeyDown={(e) => e.key === "Enter" && submitItem()}
+                  className="w-full text-sm rounded border border-line px-2 py-1.5"
+                />
+              </div>
+              <button
+                onClick={submitItem}
+                disabled={itemSaving}
+                className="rounded bg-navy-900 text-white text-sm px-4 py-2 hover:bg-navy-700 disabled:opacity-50"
+              >
+                เพิ่มรายการ
+              </button>
+            </div>
+          </div>
+        )}
         {panelOpen && (
           <div className="bg-white rounded-md border border-brass-500 p-4 mb-4">
             <div className="flex items-center justify-between mb-3">
@@ -414,7 +587,7 @@ export default function DisbursementsEntryPage() {
                 <option value="">— เลือกบัญชี —</option>
                 {leafAccounts.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.code} {a.nameOffice}
+                    {a.code} {a.name}
                   </option>
                 ))}
               </select>
@@ -564,7 +737,8 @@ export default function DisbursementsEntryPage() {
                       <tr className="border-t border-line bg-navy-50/50 font-medium">
                         <td className="py-2 pr-4" style={indent}>
                           <span className="font-mono text-xs text-navy-500 mr-2">{a.code}</span>
-                          {a.nameOffice}
+                          {a.name}
+                          {rowTools(a)}
                         </td>
                         <td className="px-4 py-2 text-right">{dash(s.budget)}</td>
                         <td className="px-4 py-2 text-right border-l border-line">{dash(s.fund)}</td>
@@ -584,7 +758,8 @@ export default function DisbursementsEntryPage() {
                     <tr className="border-t border-line">
                       <td className="py-2 pr-4 align-middle" style={indent}>
                         <span className="font-mono text-xs text-navy-500 mr-2">{a.code}</span>
-                        {a.nameOffice}
+                        {a.name}
+                        {rowTools(a)}
                       </td>
                       {(["budget", "fund", "courtFee"] as Field[]).map((f, i) => {
                         const locked = hasEntries && f !== "budget"; // ยอดเบิกจ่ายคำนวณจากรายการย่อย

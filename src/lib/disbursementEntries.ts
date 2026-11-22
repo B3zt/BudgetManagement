@@ -3,11 +3,11 @@ import { getDb } from "@/lib/prisma";
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
 // ผลรวมรายการเบิกจ่ายย่อยของบัญชีหนึ่งในเดือนหนึ่ง (null = ยังไม่มีรายการย่อย)
-export async function entrySums(accountId: string, fiscalYear: number, month: number) {
+export async function entrySums(itemId: string, fiscalYear: number, month: number) {
   const db = getDb();
   const entries = await db.orm.public.DisbursementEntry
     .select("fundSource", "amount")
-    .where({ accountId, fiscalYear, month })
+    .where({ itemId, fiscalYear, month })
     .all();
   if (entries.length === 0) return null;
   let fund = 0;
@@ -21,9 +21,9 @@ export async function entrySums(accountId: string, fiscalYear: number, month: nu
 }
 
 // คำนวณยอดเบิกจ่ายของ Disbursement ใหม่จากรายการย่อย (ไม่แตะงบประมาณที่ได้รับจัดสรร)
-export async function recomputeDisbursement(accountId: string, fiscalYear: number, month: number) {
+export async function recomputeDisbursement(itemId: string, fiscalYear: number, month: number) {
   const db = getDb();
-  const s = await entrySums(accountId, fiscalYear, month);
+  const s = await entrySums(itemId, fiscalYear, month);
   const fund = s?.fund ?? 0;
   const courtFee = s?.courtFee ?? 0;
   const spent = r2(fund + courtFee);
@@ -35,13 +35,13 @@ export async function recomputeDisbursement(accountId: string, fiscalYear: numbe
   };
 
   const existing = await db.orm.public.Disbursement
-    .where({ accountId, fiscalYear, month })
+    .where({ itemId, fiscalYear, month })
     .first();
   if (existing) {
     return db.orm.public.Disbursement.where({ id: existing.id }).update(data);
   }
   return db.orm.public.Disbursement.create({
-    accountId,
+    itemId,
     fiscalYear,
     month,
     budgetAmount: "0.00",
