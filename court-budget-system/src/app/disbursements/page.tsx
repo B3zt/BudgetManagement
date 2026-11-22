@@ -392,7 +392,7 @@ export default function DisbursementsEntryPage() {
                   <th className="px-4 py-2 font-medium text-center border-l border-line" colSpan={3}>
                     ยอดเบิกจ่ายจริง (บาท)
                   </th>
-                  <th className="px-4 py-2 font-medium w-24" rowSpan={2}></th>
+                  <th className="px-4 py-2 font-medium" rowSpan={2}></th>
                 </tr>
                 <tr className="bg-navy-50 text-xs text-navy-500">
                   <th className="px-4 py-2 font-medium text-right border-l border-line">เงินงบประมาณ</th>
@@ -430,18 +430,19 @@ export default function DisbursementsEntryPage() {
                         <td className="py-2 pr-4" style={indent}>
                           <span className="font-mono text-xs text-navy-500 mr-2">{a.code}</span>
                           {a.nameOffice}
-                          <button
-                            onClick={() => toggleEntries(a.id)}
-                            className="ml-3 text-xs font-medium rounded border border-navy-900 bg-navy-900 text-white px-2.5 py-1 whitespace-nowrap hover:bg-navy-700"
-                          >
-                            + เพิ่มรายการเบิกจ่าย
-                          </button>
                         </td>
                         <td className="px-4 py-2 text-right">{dash(s.budget)}</td>
                         <td className="px-4 py-2 text-right border-l border-line">{dash(s.fund)}</td>
                         <td className="px-4 py-2 text-right">{dash(s.courtFee)}</td>
                         <td className="px-4 py-2 text-right">{dash(s.fund + s.courtFee)}</td>
-                        <td></td>
+                        <td className="px-4 py-2 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => toggleEntries(a.id)}
+                            className="text-xs font-medium rounded border border-navy-900 bg-navy-900 text-white px-2.5 py-1.5 hover:bg-navy-700"
+                          >
+                            + เพิ่มรายการเบิกจ่าย
+                          </button>
+                        </td>
                       </tr>
                       {openId === a.id && (
                         <tr className="bg-navy-50/40">
@@ -464,16 +465,6 @@ export default function DisbursementsEntryPage() {
                       <td className="py-2 pr-4 align-middle" style={indent}>
                         <span className="font-mono text-xs text-navy-500 mr-2">{a.code}</span>
                         {a.nameOffice}
-                        <button
-                          onClick={() => toggleEntries(a.id)}
-                          className={`ml-3 text-xs font-medium rounded border px-2.5 py-1 whitespace-nowrap ${
-                            hasEntries
-                              ? "border-brass-500 text-brass-700 bg-brass-50"
-                              : "border-navy-900 bg-navy-900 text-white hover:bg-navy-700"
-                          }`}
-                        >
-                          {hasEntries ? `รายการเบิกจ่าย (${list.length})` : "+ เพิ่มรายการเบิกจ่าย"}
-                        </button>
                       </td>
                       {(["budget", "fund", "courtFee"] as Field[]).map((f, i) => {
                         const locked = hasEntries && f !== "budget"; // ยอดเบิกจ่ายคำนวณจากรายการย่อย
@@ -497,20 +488,30 @@ export default function DisbursementsEntryPage() {
                         );
                       })}
                       <td className="px-4 py-2 text-right font-medium">{dash(total)}</td>
-                      <td className="px-4 py-2 text-right">
-                        {row.dirty ? (
+                      <td className="px-4 py-2 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2">
+                          {row.dirty ? (
+                            <button
+                              onClick={() => saveRow(a.id)}
+                              disabled={row.saving}
+                              className="text-xs rounded bg-navy-900 text-white px-2.5 py-1.5 hover:bg-navy-700 disabled:opacity-50"
+                            >
+                              {row.saving ? "..." : "บันทึก"}
+                            </button>
+                          ) : row.saved ? (
+                            <span className="text-xs text-good">บันทึกแล้ว</span>
+                          ) : null}
                           <button
-                            onClick={() => saveRow(a.id)}
-                            disabled={row.saving}
-                            className="text-xs rounded bg-navy-900 text-white px-2.5 py-1.5 hover:bg-navy-700 disabled:opacity-50"
+                            onClick={() => toggleEntries(a.id)}
+                            className={`text-xs font-medium rounded border px-2.5 py-1.5 ${
+                              hasEntries
+                                ? "border-brass-500 text-brass-700 bg-brass-50"
+                                : "border-navy-900 bg-navy-900 text-white hover:bg-navy-700"
+                            }`}
                           >
-                            {row.saving ? "..." : "บันทึก"}
+                            {hasEntries ? `รายการเบิกจ่าย (${list.length})` : "+ เพิ่มรายการเบิกจ่าย"}
                           </button>
-                        ) : row.saved ? (
-                          <span className="text-xs text-good">บันทึกแล้ว</span>
-                        ) : (
-                          <span className="text-xs text-navy-300">—</span>
-                        )}
+                        </div>
                       </td>
                     </tr>
                     {isOpen && (
